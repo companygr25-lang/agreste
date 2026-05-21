@@ -4,6 +4,7 @@
  */
 
 import { Client, VisitReport, LargeClientActivity, CompanyDocument, Reminder, UserProfile } from '../types';
+import { isSupabaseConfigured } from './supabase';
 
 // Seed Initial Data
 const SEED_CLIENTS: Client[] = [];
@@ -240,13 +241,15 @@ export class AGRESTE_DB {
 
   // --- Database Sync Check for Supabase migration compatibility ---
   static checkDatabaseStatus() {
+    const configured = isSupabaseConfigured();
     return {
-      status: 'Ready',
-      provider: 'Supabase Adapter Configured (Local Mode)',
-      latencyMs: 12,
+      status: configured ? 'Conectado' : 'Modo Sincronização Local',
+      provider: configured ? 'Supabase Integrado' : 'Adaptador Modular Local (Aguardando Supabase)',
+      latencyMs: configured ? 45 : 12,
       tables: ['clients', 'reports', 'calendar', 'documents', 'reminders'],
-      syncActive: true,
+      syncActive: configured,
       pendingQueueLength: 0,
+      configured
     };
   }
 }

@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { Reminder } from '../types';
 import { AGRESTE_DB } from '../services/db';
+import { isSupabaseConfigured } from '../services/supabase';
 import { 
   Settings, Sun, Moon, Database, Clock, PlusCircle, CheckCircle, 
   Trash2, PlayCircle, ShieldCheck, Check, Info, FileCode
@@ -152,6 +153,27 @@ export default function SettingsTab({
             <p className="text-xs text-zinc-500 mb-5">
               Certifique-se de que a estrutura de tabelas do banco de dados (Supabase & Vercel) está saudável e pronta para a sincronização remota assíncrona.
             </p>
+
+            {!isSupabaseConfigured() && (
+              <div className="mb-5 p-4 rounded-xl border border-[#D35400]/20 bg-[#D35400]/5 text-xs text-left">
+                <div className="flex items-start gap-2.5">
+                  <Info className="w-4 h-4 text-[#D35400] shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-[#D35400] block uppercase tracking-wider mb-1 text-[10px]">Configuração de Credenciais Supabase</span>
+                    <p className="text-zinc-400 leading-relaxed mb-3 text-[11px]">
+                      Para conectar seu banco de dados Supabase e buckets de mídia reais de forma segura, acesse as configurações de <strong>Secrets (Segredos)</strong> no menu do <strong>Google AI Studio</strong> e cadastre as variáveis de ambiente com o prefixo <code>VITE_</code> abaixo:
+                    </p>
+                    <div className="space-y-1.5 font-mono text-[10.5px] bg-black/40 p-2.5 rounded border border-zinc-800 select-all text-zinc-300">
+                      <div><strong className="text-[#D35400]">VITE_SUPABASE_URL</strong>: <code>https://SEU-PROJETO.supabase.co</code></div>
+                      <div><strong className="text-[#D35400]">VITE_SUPABASE_ANON_KEY</strong>: <code>eyJhbGciOi...</code></div>
+                    </div>
+                    <span className="text-[10px] text-zinc-500 mt-2 block leading-snug">
+                      * Nota: Variáveis com o prefixo <code>VITE_</code> são carregadas de forma segura no lado do cliente (Vite HMR). Nenhuma chave sensível fica exposta publicamente sem autorização.
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {checkingDb ? (
               <div className="py-6 text-center text-xs animate-pulse text-orange-500 flex items-center justify-center gap-2 font-mono">
