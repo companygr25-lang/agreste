@@ -1,0 +1,6 @@
+{
+  "name": "AGRESTE",
+  "description": "AGRESTE - Saúde Ambiental. Sistema intuitivo de controle de pragas, acompanhamento de atividades, relatórios de visitas e gestão de documentação.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
