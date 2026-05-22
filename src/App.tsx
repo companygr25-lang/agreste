@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AGRESTE_DB } from './services/db';
+import { isSupabaseConfigured } from './services/supabase';
 import { Client, VisitReport, CompanyDocument, Reminder, UserProfile } from './types';
 import LoginScreen from './components/LoginScreen';
 import Sidebar from './components/Sidebar';
@@ -72,6 +73,23 @@ export default function App() {
 
     // Load initial databases
     refreshAllData();
+
+    // 5. Subscribe to real-time sync channel & trigger pull
+    const unsubscribe = AGRESTE_DB.subscribeToRealtime(() => {
+      refreshAllData();
+    });
+
+    if (isSupabaseConfigured()) {
+      AGRESTE_DB.pullFromSupabase().then((pulled) => {
+        if (pulled) {
+          showToast('Sincronia Ativa: Banco de dados nuvem sincronizado em tempo real.', 'success');
+        }
+      });
+    }
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const refreshAllData = () => {

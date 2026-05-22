@@ -168,16 +168,20 @@ export default function DashboardTab({
       {/* Welcome Banner */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
         <div>
-          <h2 className="text-2xl font-black font-display tracking-tight uppercase text-zinc-100 dark:text-zinc-50 flex items-center gap-2">
-            Painel Geral <span className="text-[10px] bg-[#D35400] text-white px-2 py-0.5 rounded font-mono font-bold tracking-wider">Antracite Compacto</span>
+          <h2 className="text-2xl font-black font-display tracking-tight uppercase text-zinc-100 dark:text-zinc-50 flex flex-wrap items-center gap-x-2">
+            PAINEL GERAL <span className="text-[#D35400] font-black">SAÚDE AMBIENTAL</span>
           </h2>
-          <p className="text-xs text-zinc-400 mt-0.5">
-            Métricas de controle operacional, status de conformidade integrada e agendas diárias unificadas.
+          <p className="text-xs text-zinc-400 mt-1">
+            Acompanhamento em alta densidade do controle de pragas sanitário e obrigações técnicas diárias.
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-[#D35400]/10 text-[#D35400] text-[11px] font-mono font-bold px-3 py-1 rounded-sm border border-[#D35400]/30">
-          <Clock className="w-3.5 h-3.5" />
-          <span>Sincronia: 21 de Maio, 2026</span>
+        <div className="text-right flex flex-col items-start md:items-end font-mono">
+          <span className="text-[11px] font-bold tracking-wider text-[#D35400] uppercase">
+            22/05/2026 • ANDRÉ ALMEIDA
+          </span>
+          <span className="text-[9px] font-extrabold text-zinc-400 dark:text-zinc-500 tracking-widest uppercase mt-0.5">
+            RESP.
+          </span>
         </div>
       </div>
 
@@ -188,27 +192,31 @@ export default function DashboardTab({
         <div 
           onClick={() => setActiveTab('clientes')}
           id="kpi-card-clientes"
-          className={`group shadow-sm cursor-pointer transition-all border relative overflow-hidden p-3.5 rounded-sm ${
+          className={`group shadow-sm cursor-pointer transition-all border relative overflow-hidden p-4 rounded-xl ${
             theme === 'dark' 
-              ? 'bg-[#1A1A1A] border-[#242424] border-l-[6px] border-l-[#D35400] hover:border-r-slate-800' 
-              : 'bg-white border-zinc-200 border-l-[6px] border-l-[#D35400] shadow-sm'
+              ? 'bg-[#1A1A1A] border-zinc-800 hover:border-zinc-700' 
+              : 'bg-white border-zinc-200 hover:bg-zinc-50 shadow-sm'
           }`}
         >
           <div className="flex justify-between items-start">
-            <span className="text-[9px] font-bold font-mono uppercase tracking-[0.08em] text-[#D35400]">
-              Controle Geral
-            </span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-[#D35400] transition-colors" />
+            <div className="flex flex-col text-left">
+              <span className="text-[10px] font-bold font-mono tracking-wider text-zinc-400">
+                CLIENTES
+              </span>
+              <span className="text-[9px] font-black tracking-wider text-zinc-500 uppercase">
+                REGULAMENTADOS
+              </span>
+            </div>
+            <div className="p-1.5 rounded-lg bg-[#D35400]/10 text-[#D35400]">
+              <Users className="w-4 h-4" />
+            </div>
           </div>
-          <div className="mt-2.5">
-            <span className="block text-3xl font-black font-mono tracking-tight text-[#D35400]">
+          <div className="mt-4 text-left">
+            <span className="block text-4xl font-extrabold font-mono tracking-tight text-[#D35400]">
               {activeClientsCount}
             </span>
-            <span className="text-xs font-bold block mt-0.5 text-zinc-200 dark:text-zinc-100">
-              Clientes Ativos
-            </span>
-            <span className="text-[10px] text-zinc-500 block leading-tight mt-0.5">
-              Cadastros ativos e mapeados.
+            <span className="text-[10px] text-emerald-500 font-bold block mt-1">
+              +{clients.filter(c => c.createdAt && c.createdAt.startsWith('2026-05')).length} este mês
             </span>
           </div>
         </div>
@@ -217,57 +225,65 @@ export default function DashboardTab({
         <div 
           onClick={() => setActiveTab('relatorios')}
           id="kpi-card-atividades"
-          className={`group shadow-sm cursor-pointer transition-all border relative overflow-hidden p-3.5 rounded-sm ${
+          className={`group shadow-sm cursor-pointer transition-all border relative overflow-hidden p-4 rounded-xl ${
             theme === 'dark' 
-              ? 'bg-[#1A1A1A] border-[#242424] border-l-[6px] border-l-[#10B981]' 
-              : 'bg-white border-zinc-200 border-l-[6px] border-l-emerald-500 shadow-sm'
+              ? 'bg-[#1A1A1A] border-zinc-800 hover:border-zinc-700' 
+              : 'bg-white border-zinc-200 hover:bg-zinc-50 shadow-sm'
           }`}
         >
           <div className="flex justify-between items-start">
-            <span className="text-[9px] font-bold font-mono uppercase tracking-[0.08em] text-emerald-500">
-              Estatísticas SMS
-            </span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-emerald-500 transition-colors" />
+            <div className="flex flex-col text-left">
+              <span className="text-[10px] font-bold font-mono tracking-wider text-zinc-400">
+                VISITAS REALIZADAS
+              </span>
+            </div>
+            <div className="p-1.5 rounded-lg bg-sky-500/10 text-sky-500">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
           </div>
-          <div className="mt-2.5">
-            <span className="block text-3xl font-black font-mono tracking-tight text-emerald-500">
+          <div className="mt-7 text-left">
+            <span className="block text-4xl font-extrabold font-mono tracking-tight text-sky-400">
               {completedVisitsCount}
             </span>
-            <span className="text-xs font-bold block mt-0.5 text-zinc-200 dark:text-zinc-100">
-              Atividades Concluídas
-            </span>
-            <span className="text-[10px] text-zinc-500 block leading-tight mt-0.5">
-              Laudos técnicos salvos hoje.
+            <span className="text-[10px] text-sky-400 font-bold block mt-1">
+              {completedVisitsCount} registrada(s)
             </span>
           </div>
         </div>
 
         {/* Metric 3 (Lembretes / Demandas) */}
         <div 
-          onClick={() => setActiveTab('configuracoes')}
+          onClick={() => setActiveTab('calendario')}
           id="kpi-card-demandas"
-          className={`group shadow-sm cursor-pointer transition-all border relative overflow-hidden p-3.5 rounded-sm ${
+          className={`group shadow-sm cursor-pointer transition-all border relative overflow-hidden p-4 rounded-xl ${
             theme === 'dark' 
-              ? 'bg-[#1A1A1A] border-[#242424] border-l-[6px] border-l-[#F59E0B]' 
-              : 'bg-white border-zinc-200 border-l-[6px] border-l-amber-500 shadow-sm'
+              ? 'bg-[#1A1A1A] border-zinc-800 hover:border-zinc-700' 
+              : 'bg-white border-zinc-200 hover:bg-zinc-50 shadow-sm'
           }`}
         >
           <div className="flex justify-between items-start">
-            <span className="text-[9px] font-bold font-mono uppercase tracking-[0.08em] text-amber-500">
-              Pendências Campo
-            </span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-500 transition-colors" />
+            <div className="flex flex-col text-left">
+              <span className="text-[10px] font-bold font-mono tracking-wider text-zinc-400">
+                VISITAS PENDENTES
+              </span>
+            </div>
+            <div className="p-1.5 rounded-lg bg-red-500/10 text-red-500">
+              <Clock className="w-4 h-4" />
+            </div>
           </div>
-          <div className="mt-2.5">
-            <span className="block text-3xl font-black font-mono tracking-tight text-amber-500">
-              {AGRESTE_DB.getReminders().filter(r => !r.completed).length}
+          <div className="mt-7 text-left">
+            <span className="block text-4xl font-extrabold font-mono tracking-tight text-red-500">
+              {String(clients.filter(c => !reports.some(r => r.clientId === c.id)).length).padStart(2, '0')}
             </span>
-            <span className="text-xs font-bold block mt-0.5 text-zinc-200 dark:text-zinc-100">
-              Lembretes de Campo
-            </span>
-            <span className="text-[10px] text-zinc-500 block leading-tight mt-0.5">
-              Instruções e alarmes ativos.
-            </span>
+            {clients.filter(c => !reports.some(r => r.clientId === c.id)).length > 0 ? (
+              <span className="text-[9px] text-[#FF4444] font-extrabold tracking-wider mt-1 uppercase block">
+                AÇÃO NECESSÁRIA
+              </span>
+            ) : (
+              <span className="text-[9px] text-emerald-500 font-extrabold tracking-wider mt-1 uppercase block">
+                TUDO EM DIA
+              </span>
+            )}
           </div>
         </div>
 
@@ -275,30 +291,45 @@ export default function DashboardTab({
         <div 
           onClick={() => setActiveTab('documentacao')}
           id="kpi-card-docs"
-          className={`group shadow-sm cursor-pointer transition-all border relative overflow-hidden p-3.5 rounded-sm ${
+          className={`group shadow-sm cursor-pointer transition-all border relative overflow-hidden p-4 rounded-xl ${
             theme === 'dark' 
-              ? 'bg-[#1A1A1A] border-[#242424] border-l-[6px] border-l-[#EF4444]' 
-              : 'bg-white border-zinc-200 border-l-[6px] border-l-red-500 shadow-sm'
+              ? 'bg-[#1A1A1A] border-zinc-800 hover:border-zinc-700' 
+              : 'bg-white border-zinc-200 hover:bg-zinc-50 shadow-sm'
           }`}
         >
           <div className="flex justify-between items-start">
-            <span className="text-[9px] font-bold font-mono uppercase tracking-[0.08em] text-red-500">
-              Vigilância Ativa
-            </span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-red-500 transition-colors" />
+            <div className="flex flex-col text-left">
+              <span className="text-[10px] font-bold font-mono tracking-wider text-zinc-400">
+                VALIDADE DE OPERAÇÃO
+              </span>
+            </div>
+            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500">
+              <FileCheck className="w-4 h-4" />
+            </div>
           </div>
-          <div className="mt-2.5">
-            <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-black font-mono tracking-tight text-red-500">
+          <div className="mt-4 flex items-center justify-between text-left">
+            <div className="flex items-baseline gap-1 font-mono">
+              <span className="text-4xl font-extrabold text-emerald-500">
                 {okDocsCount}
               </span>
-              <span className="text-[11px] font-mono font-bold text-zinc-500">/ {documents.length} OK</span>
+              <div className="text-[10px] text-zinc-500 flex flex-col leading-none">
+                <span>/ {pendingDocsCount}</span>
+                <span>pend.</span>
+              </div>
             </div>
-            <span className="text-xs font-bold block mt-0.5 text-zinc-200 dark:text-zinc-100">
-              Documentos Estáveis
-            </span>
-            <span className="text-[10px] text-zinc-500 block leading-tight mt-0.5">
-              {pendingDocsCount > 0 ? `${pendingDocsCount} alertas de ação pendente.` : 'Alvarás e termos regulares.'}
+            {pendingDocsCount > 0 ? (
+              <div className="px-2.5 py-0.5 bg-amber-600 text-white text-[11px] font-black rounded-md tracking-wider">
+                ALERTA
+              </div>
+            ) : (
+              <div className="px-2.5 py-0.5 bg-emerald-600 text-white text-[11px] font-black rounded-md tracking-wider">
+                OK
+              </div>
+            )}
+          </div>
+          <div className="mt-1 text-left">
+            <span className={`text-[10px] font-extrabold block leading-tight ${pendingDocsCount > 0 ? 'text-amber-500' : 'text-zinc-500 dark:text-zinc-400'}`}>
+              {pendingDocsCount > 0 ? 'Cobrança recomendada' : 'Certificados integrados'}
             </span>
           </div>
         </div>

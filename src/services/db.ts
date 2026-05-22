@@ -4,7 +4,7 @@
  */
 
 import { Client, VisitReport, LargeClientActivity, CompanyDocument, Reminder, UserProfile } from '../types';
-import { isSupabaseConfigured } from './supabase';
+import { isSupabaseConfigured, getSupabase } from './supabase';
 
 // Seed Initial Data
 const SEED_CLIENTS: Client[] = [];
@@ -22,6 +22,90 @@ const SEED_PROFILE: UserProfile = {
 };
 
 export class AGRESTE_DB {
+  private static listeners: (() => void)[] = [];
+  private static realtimeChannel: any = null;
+
+  static subscribeToRealtime(callback: () => void): () => void {
+    this.listeners.push(callback);
+    
+    // Lazy initialize Supabase real-time subscription
+    if (isSupabaseConfigured() && !this.realtimeChannel) {
+      this.initRealtimeSubscription();
+    }
+
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== callback);
+    };
+  }
+
+  private static notifyListeners() {
+    this.listeners.forEach(callback => {
+      try {
+        callback();
+      } catch (err) {
+        console.error('Error in listener callback:', err);
+      }
+    });
+  }
+
+  private static initRealtimeSubscription() {
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    this.realtimeChannel = supabase
+      .channel('agreste_realtime_db')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'agreste_sync' }, (payload: any) => {
+        const row = payload.new;
+        if (row && row.key) {
+          localStorage.setItem(`agreste_${row.key}`, JSON.stringify(row.data));
+          this.notifyListeners();
+        }
+      })
+      .subscribe();
+  }
+
+  static async pullFromSupabase(): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    const supabase = getSupabase();
+    if (!supabase) return false;
+
+    try {
+      const { data, error } = await supabase.from('agreste_sync').select('*');
+      if (error) {
+        console.warn('Erro ao carregar dados do Supabase:', error);
+        return false;
+      }
+
+      if (data && data.length > 0) {
+        data.forEach((row: any) => {
+          localStorage.setItem(`agreste_${row.key}`, JSON.stringify(row.data));
+        });
+        this.notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.warn('Falha na comunicação com o Supabase durante o pull:', err);
+      return false;
+    }
+  }
+
+  static async pushToSupabase(key: string, value: any): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    try {
+      await supabase.from('agreste_sync').upsert({
+        key,
+        data: value,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'key' });
+    } catch (err) {
+      console.warn(`Erro ao salvar '${key}' no Supabase:`, err);
+    }
+  }
+
   private static get<T>(key: string, seed: T): T {
     try {
       const data = localStorage.getItem(`agreste_${key}`);
@@ -37,6 +121,7 @@ export class AGRESTE_DB {
 
   private static set<T>(key: string, value: T): void {
     localStorage.setItem(`agreste_${key}`, JSON.stringify(value));
+    this.pushToSupabase(key, value);
   }
 
   // --- Theme ---

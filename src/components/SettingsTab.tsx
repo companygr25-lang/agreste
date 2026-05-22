@@ -223,8 +223,29 @@ export default function SettingsTab({
               <button
                 type="button"
                 onClick={() => {
-                  showToast('Estrutura de tabelas do Supabase exportada para o console de desenvolvimento.', 'info');
-                  console.log('SUPABASE CREATE TABLES COMMANDS READY');
+                  showToast('Estrutura de tabelas (SQL) copiada para o console de desenvolvimento. Abra-o com F12.', 'info');
+                  console.log(`
+-- =========================================================
+-- SCHEMA DE PORTABILIDADE E CONEXÃO EM TEMPO REAL - AGRESTE
+-- Execute este comando no console SQL (SQL Editor) do seu Supabase:
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS public.agreste_sync (
+    key text PRIMARY KEY,
+    data jsonb NOT NULL,
+    updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Habilitar replicação em tempo real para sincronia instantânea
+ALTER PUBLICATION supabase_realtime ADD TABLE public.agreste_sync;
+
+-- Habilitar permissões públicas se autenticação de anon for habilitada
+ALTER TABLE public.agreste_sync ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read and write access" ON public.agreste_sync
+    FOR ALL USING (true) WITH CHECK (true);
+
+console.log('SQL IMPRESSO COM SUCESSO - PRONTO PARA COPIAR');
+                  `);
                 }}
                 id="export-schema-btn"
                 className={`py-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${
