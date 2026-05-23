@@ -140,6 +140,10 @@ export class AGRESTE_DB {
     });
   }
 
+  static saveUsers(users: Record<string, string>): void {
+    this.set('users', users);
+  }
+
   static getUserDetails(): Record<string, SystemUserDetail> {
     const defaultDetails: Record<string, SystemUserDetail> = {
       'gil silva': {

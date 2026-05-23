@@ -8,8 +8,10 @@ import { AGRESTE_DB } from '../services/db';
 import { SystemUserDetail } from '../types';
 import { 
   Users, UserCheck, UserX, Clock, ShieldAlert, CheckCircle2, 
-  Trash2, Search, Filter, ShieldCheck, UserMinus, KeyRound 
+  Trash2, Search, Filter, ShieldCheck, UserMinus, KeyRound,
+  Edit, AlertCircle, X, Check
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface UsersTabProps {
   theme: 'light' | 'dark';
@@ -21,6 +23,17 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
   const [usersDict, setUsersDict] = useState<Record<string, SystemUserDetail>>(() => AGRESTE_DB.getUserDetails());
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'blocked'>('all');
+
+  // Confirmation and edit states
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<{ username: string; name: string } | null>(null);
+  const [showEditModal, setShowEditModal] = useState<SystemUserDetail | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editStatus, setEditStatus] = useState<'pending' | 'approved' | 'blocked'>('pending');
+  const [editPaymentStatus, setEditPaymentStatus] = useState<'pago' | 'pendente'>('pendente');
+  const [editPaymentValue, setEditPaymentValue] = useState<number>(150);
+  const [editAllowedTabs, setEditAllowedTabs] = useState<string[]>([]);
+  const [showEditConfirm, setShowEditConfirm] = useState<{ original: SystemUserDetail; updated: SystemUserDetail; newPassword?: string } | null>(null);
   
   const refreshUsers = () => {
     const updated = AGRESTE_DB.getUserDetails();
@@ -82,21 +95,94 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
     }
   };
 
-  const handleDelete = (username: string) => {
-    if (confirm(`Tem certeza que deseja excluir permanentemente o cadastro de ${username}?`)) {
-      const updatedDetails = { ...usersDict };
-      delete updatedDetails[username];
-      AGRESTE_DB.saveUserDetails(updatedDetails);
+  const handleDelete = (username: string, name: string) => {
+    setShowDeleteConfirm({ username, name });
+  };
 
-      // Also delete from credential dictionary
-      const credentials = AGRESTE_DB.getUsers();
-      delete credentials[username];
-      // Save updated credentials
-      localStorage.setItem('agreste_users', JSON.stringify(credentials));
-      
-      showToast(`Cadastro de '${username}' excluído com sucesso.`, 'success');
-      refreshUsers();
+  const handleConfirmDelete = () => {
+    if (!showDeleteConfirm) return;
+    const { username } = showDeleteConfirm;
+
+    const updatedDetails = { ...usersDict };
+    delete updatedDetails[username];
+    AGRESTE_DB.saveUserDetails(updatedDetails);
+
+    // Also delete from credential dictionary
+    const credentials = AGRESTE_DB.getUsers();
+    delete credentials[username];
+    // Save updated credentials
+    AGRESTE_DB.saveUsers(credentials);
+    
+    showToast(`Cadastro de '${username}' excluído com sucesso.`, 'success');
+    setShowDeleteConfirm(null);
+    refreshUsers();
+  };
+
+  // User editing actions
+  const openEditModal = (user: SystemUserDetail) => {
+    setShowEditModal(user);
+    setEditName(user.name);
+    
+    const credentials = AGRESTE_DB.getUsers();
+    setEditPassword(credentials[user.username] || '');
+
+    setEditStatus(user.status);
+    setEditPaymentStatus(user.paymentStatus);
+    setEditPaymentValue(user.paymentValue);
+    setEditAllowedTabs(user.allowedTabs || []);
+  };
+
+  const handleToggleTabPermission = (tabId: string) => {
+    setEditAllowedTabs(prev => 
+      prev.includes(tabId) ? prev.filter(t => t !== tabId) : [...prev, tabId]
+    );
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showEditModal) return;
+    if (!editName.trim()) {
+      showToast('Por favor, defina um nome.', 'error');
+      return;
     }
+
+    const updatedUser: SystemUserDetail = {
+      ...showEditModal,
+      name: editName.trim(),
+      status: editStatus,
+      paymentStatus: editPaymentStatus,
+      paymentValue: editPaymentValue,
+      allowedTabs: editAllowedTabs
+    };
+
+    setShowEditConfirm({
+      original: showEditModal,
+      updated: updatedUser,
+      newPassword: editPassword
+    });
+  };
+
+  const handleConfirmEditSave = () => {
+    if (!showEditConfirm) return;
+    const { updated, newPassword } = showEditConfirm;
+    const { username } = updated;
+
+    // 1. Save user properties
+    const updatedDetails = { ...usersDict };
+    updatedDetails[username] = updated;
+    AGRESTE_DB.saveUserDetails(updatedDetails);
+
+    // 2. Save user credentials password
+    if (newPassword) {
+      const credentials = AGRESTE_DB.getUsers();
+      credentials[username] = newPassword;
+      AGRESTE_DB.saveUsers(credentials);
+    }
+
+    showToast(`Usuário "${updated.name}" atualizado com sucesso!`, 'success');
+    setShowEditConfirm(null);
+    setShowEditModal(null);
+    refreshUsers();
   };
 
   const handleUpdatePaymentValue = (username: string, value: number) => {
@@ -327,7 +413,16 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
                   )}
 
                   <button
-                    onClick={() => handleDelete(user.username)}
+                    onClick={() => openEditModal(user)}
+                    id={`edit-user-btn-${user.username}`}
+                    className="p-1.5 hover:bg-orange-500/10 hover:border-orange-500/20 text-zinc-500 hover:text-orange-500 rounded-lg transition-colors cursor-pointer border border-transparent"
+                    title="Editar operador"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    onClick={() => handleDelete(user.username, user.name)}
                     id={`delete-user-btn-${user.username}`}
                     className="p-1.5 hover:bg-red-500/10 hover:border-red-500/20 text-zinc-500 hover:text-red-500 rounded-lg transition-colors cursor-pointer border border-transparent"
                     title="Excluir cadastro"
@@ -340,6 +435,323 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
           })
         )}
       </div>
+
+      {/* MODAL 1: DELETE USER CONFIRMATION OVERLAY */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDeleteConfirm(null)}
+              className="absolute inset-0 bg-black/75 backdrop-blur-xs"
+            />
+
+            {/* Modal Content */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className={`relative w-full max-w-sm rounded-2xl border p-6 shadow-2xl z-10 text-center ${
+                theme === 'dark' ? 'bg-[#1a1a1a] border-red-500/30 text-white' : 'bg-white border-zinc-200 text-zinc-900'
+              }`}
+            >
+              <div className="mx-auto w-12 h-12 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mb-4">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+
+              <h2 className="font-bold text-lg font-display mb-1">Deseja excluir operador?</h2>
+              <p className="text-xs text-zinc-400 leading-relaxed mb-6">
+                Você está prestes a excluir permanentemente o cadastro de <span className="font-bold text-red-400">"{showDeleteConfirm.name}"</span> (@{showDeleteConfirm.username}). Esta ação é irreversível e revogará imediatamente o acesso deste operador ao sistema.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3 justify-center">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="px-4 py-2 hover:bg-zinc-800 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  id="confirm-delete-user-btn"
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-md"
+                >
+                  Sim, Excluir
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL 2: EDIT USER MODAL */}
+      <AnimatePresence>
+        {showEditModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowEditModal(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs"
+            />
+
+            {/* Modal Body */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className={`relative w-full max-w-md rounded-2xl border p-6 shadow-2xl z-10 ${
+                theme === 'dark' ? 'bg-[#1A1A1A] border-[#242424] text-white' : 'bg-white border-zinc-200 text-zinc-900'
+              }`}
+            >
+              <div className="flex justify-between items-center mb-5">
+                <div className="text-left">
+                  <h3 className="text-lg font-bold font-display">Editar Dados do Operador</h3>
+                  <p className="text-[10px] text-zinc-500">Ajuste credenciais, mensalidade e permissões de acesso de @{showEditModal.username}.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(null)}
+                  className="text-zinc-500 hover:text-white p-1 hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleEditSubmit} className="space-y-4 text-left">
+                {/* Name */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                    Nome Completo *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Ex: Adriano Senna"
+                    className={`w-full py-2 px-3.5 rounded-xl border text-xs outline-none transition-all ${
+                      theme === 'dark'
+                        ? 'bg-zinc-950 border-[#242424] text-white focus:border-[#D35400]'
+                        : 'bg-zinc-100 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                    }`}
+                  />
+                </div>
+
+                {/* Password Change */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                    Senha de Acesso *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                      <KeyRound className="w-3.5 h-3.5" />
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={editPassword}
+                      onChange={(e) => setEditPassword(e.target.value)}
+                      placeholder="Redefinir senha..."
+                      className={`w-full py-2 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-[#242424] text-white focus:border-[#D35400]'
+                          : 'bg-zinc-100 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Numeric Licença Value and Status Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                      Licença Cadastrada (R$) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={editPaymentValue}
+                      onChange={(e) => setEditPaymentValue(Number(e.target.value))}
+                      className={`w-full py-2 px-3.5 rounded-xl border text-xs outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-[#242424] text-white focus:border-[#D35400]'
+                          : 'bg-zinc-100 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                      Situação de Acesso *
+                    </label>
+                    <select
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value as any)}
+                      className={`w-full py-2 px-3 rounded-xl border text-xs outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-[#242424] text-zinc-300 focus:border-[#D35400]'
+                          : 'bg-white border-zinc-200 text-zinc-700 focus:border-[#D35400]'
+                      }`}
+                    >
+                      <option value="approved">Aprovado / Ativo</option>
+                      <option value="pending">Pendente Liberação</option>
+                      <option value="blocked">Bloqueado</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Faturamento Financeiro */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                    Status Faturamento Financeiro *
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditPaymentStatus('pago')}
+                      className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold uppercase border cursor-pointer ${
+                        editPaymentStatus === 'pago'
+                          ? 'bg-emerald-600/10 border-emerald-600 text-emerald-400'
+                          : theme === 'dark' ? 'bg-zinc-950/20 border-[#242424] text-zinc-500' : 'bg-zinc-100 border-zinc-200 text-zinc-500'
+                      }`}
+                    >
+                      Pago
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditPaymentStatus('pendente')}
+                      className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold uppercase border cursor-pointer ${
+                        editPaymentStatus === 'pendente'
+                          ? 'bg-red-600/10 border-red-600 text-red-500'
+                          : theme === 'dark' ? 'bg-zinc-950/20 border-[#242424] text-zinc-500' : 'bg-zinc-100 border-zinc-200 text-zinc-500'
+                      }`}
+                    >
+                      Pendente
+                    </button>
+                  </div>
+                </div>
+
+                {/* Permissions checkboxes (Allowed tabs) */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                    Telas e Permissões do Sistema
+                  </label>
+                  <div className={`p-3 rounded-xl border text-left max-h-[140px] overflow-y-auto ${
+                    theme === 'dark' ? 'bg-zinc-950 border-[#242424]' : 'bg-zinc-50 border-zinc-200'
+                  } space-y-1.5 scrollbar-thin`}>
+                    {[
+                      { id: 'dashboard', label: 'Painel Geral (Dashboard)' },
+                      { id: 'clientes', label: 'Gestão de Clientes' },
+                      { id: 'calendario', label: 'Calendário de Cronogramas' },
+                      { id: 'relatorios', label: 'Laudos e Visitas' },
+                      { id: 'usuarios', label: 'Gestão de Usuários (Admin)' },
+                      { id: 'documentacao', label: 'Documentação Técnica' },
+                      { id: 'perfil', label: 'Perfil do Operador' },
+                      { id: 'configuracoes', label: 'Configurações Globais' }
+                    ].map(tab => {
+                      const isChecked = editAllowedTabs.includes(tab.id);
+                      return (
+                        <div 
+                          key={tab.id}
+                          onClick={() => handleToggleTabPermission(tab.id)}
+                          className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[#D35400]/5 cursor-pointer text-[11px] transition-colors"
+                        >
+                          <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-all ${
+                            isChecked 
+                              ? 'bg-[#D35400] border-[#D35400]' 
+                              : theme === 'dark' ? 'border-zinc-800 bg-zinc-900/40' : 'border-zinc-300 bg-white'
+                          }`}>
+                            {isChecked && <Check className="w-2.5 h-2.5 text-white stroke-[3.5px]" />}
+                          </div>
+                          <span className={isChecked ? 'text-white' : 'text-zinc-350 dark:text-zinc-400'}>{tab.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Save Options */}
+                <div className="pt-3 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(null)}
+                    className="flex-1 py-2 border border-zinc-805/40 dark:border-zinc-800 text-zinc-550 hover:text-white rounded-xl transition-all cursor-pointer text-xs font-bold uppercase"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 bg-[#D35400] hover:bg-[#FC6B0A] text-white font-bold text-xs uppercase rounded-xl cursor-pointer"
+                  >
+                    Salvar Alterações
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL 3: EDIT ACTION CONFIRMATION OVERLAY */}
+      <AnimatePresence>
+        {showEditConfirm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowEditConfirm(null)}
+              className="absolute inset-0 bg-black/85 backdrop-blur-xs"
+            />
+
+            {/* Modal Content */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className={`relative w-full max-w-sm rounded-2xl border p-6 shadow-2xl z-10 text-center ${
+                theme === 'dark' ? 'bg-[#1a1a1a] border-[#D35400]/30 text-white' : 'bg-white border-zinc-200 text-zinc-900'
+              }`}
+            >
+              <div className="mx-auto w-12 h-12 bg-[#D35400]/10 text-[#D35400] rounded-full flex items-center justify-center mb-4">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+
+              <h3 className="font-bold text-lg font-display mb-1">Confirmar Alterações</h3>
+              <p className="text-xs text-zinc-455 dark:text-zinc-400 leading-relaxed mb-6">
+                Deseja confirmar e aplicar os novos dados cadastrais e de licenciamento para o operador <span className="font-bold text-[#FC6B0A]">"{showEditConfirm.updated.name}"</span>? Esta alteração impacta os acessos e módulos liberados imediatamente.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3 justify-center">
+                <button
+                  type="button"
+                  onClick={() => setShowEditConfirm(null)}
+                  className="px-4 py-2 hover:bg-zinc-800 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmEditSave}
+                  className="px-4 py-2 bg-[#D35400] hover:bg-[#FC6B0A] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-md"
+                >
+                  Sim, Confirmar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
