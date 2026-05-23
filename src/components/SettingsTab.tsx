@@ -4,12 +4,13 @@
  */
 
 import React, { useState } from 'react';
-import { Reminder } from '../types';
+import { Reminder, SystemUserDetail } from '../types';
 import { AGRESTE_DB } from '../services/db';
 import { isSupabaseConfigured } from '../services/supabase';
 import { 
   Settings, Sun, Moon, Database, Clock, PlusCircle, CheckCircle, 
-  Trash2, PlayCircle, ShieldCheck, Check, Info, FileCode
+  Trash2, PlayCircle, ShieldCheck, Check, Info, FileCode,
+  Lock, Unlock, ShieldAlert, CreditCard, LayoutGrid, KeyRound
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -19,10 +20,11 @@ interface SettingsTabProps {
   reminders: Reminder[];
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   onRefreshData: () => void;
+  currentUser?: string | null;
 }
 
 export default function SettingsTab({ 
-  theme, setTheme, reminders, showToast, onRefreshData 
+  theme, setTheme, reminders, showToast, onRefreshData, currentUser 
 }: SettingsTabProps) {
   const [newTitle, setNewTitle] = useState('');
   const [newTime, setNewTime] = useState('');
@@ -31,6 +33,74 @@ export default function SettingsTab({
   const [checkingDb, setCheckingDb] = useState(false);
   const [dbStatusResult, setDbStatusResult] = useState<any | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // Provider states
+  const [providerUsers, setProviderUsers] = useState<Record<string, SystemUserDetail>>(() => AGRESTE_DB.getUserDetails());
+  const [licenses, setLicenses] = useState<number>(() => AGRESTE_DB.getLicensesLimit());
+  
+  const activeUsersExcludingGil = (Object.values(providerUsers) as SystemUserDetail[]).filter(u => u.username !== 'gil silva' && u.status === 'approved');
+  
+  const [selectedUser, setSelectedUser] = useState<string>(() => {
+    return activeUsersExcludingGil[0]?.username || '';
+  });
+
+  const [paymentVal, setPaymentVal] = useState<number>(() => {
+    const defaultUser = activeUsersExcludingGil[0]?.username;
+    const user = providerUsers[selectedUser || defaultUser];
+    return user ? user.paymentValue : 150;
+  });
+
+  const [screens, setScreens] = useState<string[]>(() => {
+    const defaultUser = activeUsersExcludingGil[0]?.username;
+    const user = providerUsers[selectedUser || defaultUser];
+    return user ? user.allowedTabs || [] : [];
+  });
+
+  const [canModify, setCanModify] = useState<boolean>(() => {
+    const defaultUser = activeUsersExcludingGil[0]?.username;
+    const user = providerUsers[selectedUser || defaultUser];
+    return user ? user.canEditData !== false : true;
+  });
+
+  // When selected user changes, reload states
+  const handleSelectUser = (username: string) => {
+    setSelectedUser(username);
+    const user = providerUsers[username];
+    if (user) {
+      setPaymentVal(user.paymentValue);
+      setScreens(user.allowedTabs || []);
+      setCanModify(user.canEditData !== false);
+    }
+  };
+
+  const handleSaveUserConfig = () => {
+    if (!selectedUser) {
+      showToast('Selecione um usuário para configurar.', 'error');
+      return;
+    }
+
+    const updated = { ...providerUsers };
+    if (updated[selectedUser]) {
+      updated[selectedUser].paymentValue = Number(paymentVal) || 0;
+      updated[selectedUser].allowedTabs = screens;
+      updated[selectedUser].canEditData = canModify;
+      
+      AGRESTE_DB.saveUserDetails(updated);
+      setProviderUsers(updated);
+      showToast(`Permissões de '${updated[selectedUser].name}' salvas com sucesso!`, 'success');
+      onRefreshData();
+    }
+  };
+
+  const handleSaveLicenses = () => {
+    if (licenses < 1) {
+      showToast('O número de licenças deve ser no mínimo 1.', 'error');
+      return;
+    }
+    AGRESTE_DB.setLicensesLimit(licenses);
+    showToast(`Limite de licenças do sistema atualizado para ${licenses} com sucesso!`, 'success');
+    onRefreshData();
+  };
 
   // Toggle theme and update storage
   const handleToggleTheme = (selected: 'light' | 'dark') => {
@@ -84,6 +154,244 @@ export default function SettingsTab({
       showToast('Status do banco de dados verificado. Conexão ESTÁVEL!', 'success');
     }, 1200);
   };
+
+  const isProvider = currentUser?.toLowerCase() === 'gil silva';
+
+  if (isProvider) {
+    return (
+      <div className="space-y-6" id="provider-config-view">
+        {/* Welcome Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-zinc-900/10 dark:border-zinc-800/40 pb-5 text-left">
+          <div>
+            <h2 className="text-2xl font-black font-display tracking-tight text-[#D35400] uppercase flex items-center gap-2">
+              <Settings className="w-6 h-6 shrink-0 text-[#D35400]" /> CONFIGURAÇÃO DO SISTEMA
+            </h2>
+            <p className="text-xs text-zinc-500 font-medium font-sans">
+              Controle o teto máximo de licenças permitidas, as mensalidades de cada conta e as abas visíveis dos operadores.
+            </p>
+          </div>
+          <div className="text-right flex flex-col items-start md:items-end font-mono">
+            <span className="text-[11px] font-bold tracking-wider text-[#D35400] uppercase">
+              GIL SILVA • ADMINISTRADOR
+            </span>
+            <span className="text-[9px] font-extrabold text-[#D35400]/85 uppercase tracking-wider mt-0.5 animate-pulse">
+              PROVEDOR DO SISTEMA
+            </span>
+          </div>
+        </div>
+
+        {/* Configuration Split Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Box 1: Licensing Limit and Global Settings (Span 1) */}
+          <div className={`p-5 rounded-2xl border ${
+            theme === 'dark' ? 'bg-[#151515] border-zinc-900' : 'bg-white border-zinc-200 shadow-sm'
+          } text-left flex flex-col justify-between`}>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-orange-500 mb-4 flex items-center gap-1.5 pb-2 border-b border-zinc-900/10 dark:border-zinc-850">
+                <ShieldAlert className="w-4 h-4 text-orange-400 shrink-0" /> Limite de Licenças (Acessos)
+              </h3>
+              
+              <p className="text-xs text-zinc-400 leading-relaxed font-sans mb-5">
+                Defina o número máximo de licenças de operadores ativos que podem estar cadastrados simultaneamente no aplicativo.
+              </p>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setLicenses(prev => Math.max(1, prev - 1))}
+                    className="w-10 h-10 bg-zinc-950 hover:bg-zinc-900 active:scale-95 text-zinc-300 font-black text-lg border border-zinc-850 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    value={licenses}
+                    onChange={(e) => setLicenses(Math.max(1, Number(e.target.value) || 1))}
+                    className={`w-full py-2.5 px-3 rounded-xl border text-center font-bold tracking-wider font-mono outline-none ${
+                      theme === 'dark'
+                        ? 'bg-zinc-950 border-zinc-800 text-white focus:border-orange-500'
+                        : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-orange-500'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setLicenses(prev => prev + 1)}
+                    className="w-10 h-10 bg-zinc-950 hover:bg-zinc-900 active:scale-95 text-zinc-300 font-black text-lg border border-zinc-850 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                  >
+                    +
+                  </button>
+                </div>
+
+                <div className="flex items-start gap-2 p-3 bg-zinc-950/25 border border-zinc-900/30 rounded-xl mt-3 text-[11px] text-zinc-400 leading-normal font-sans">
+                  <Info className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+                  <p>
+                    Quando este limite for atingido, novas solicitações na tela de Liberações serão barradas até que o limite seja estendido ou uma licença atual seja desativada.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSaveLicenses}
+              className="mt-6 w-full py-2.5 bg-[#D35400] hover:bg-[#FC6B0A] text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all shadow-md shadow-[#D35400]/10 flex items-center justify-center gap-1.5 cursor-pointer border border-[#D35400]"
+            >
+              <Check className="w-4 h-4" /> Atualizar Licenças
+            </button>
+          </div>
+
+          {/* Box 2: Controlling Each Accounts Tab Access & Write Lock (Span 2) */}
+          <div className={`lg:col-span-2 p-5 rounded-2xl border ${
+            theme === 'dark' ? 'bg-[#151515] border-zinc-900' : 'bg-white border-zinc-200 shadow-sm'
+          } text-left`}>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-orange-500 mb-4 flex items-center gap-1.5 pb-2 border-b border-zinc-900/10 dark:border-zinc-850">
+              <KeyRound className="w-4 h-4 text-orange-400 shrink-0" /> Restrições & Telas por Operador
+            </h3>
+
+            {activeUsersExcludingGil.length === 0 ? (
+              <div className="py-12 text-center text-zinc-500 text-xs font-semibold font-sans">
+                Nenhum operador ativo no sistema para configurar de forma customizada.
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Select User Dropdown */}
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-2">Seleção da Conta de Trabalho</label>
+                  <select
+                    value={selectedUser}
+                    onChange={(e) => handleSelectUser(e.target.value)}
+                    className={`w-full py-2.5 px-3 rounded-xl border font-bold text-xs outline-none transition-all ${
+                      theme === 'dark'
+                        ? 'bg-zinc-950 border-zinc-805 text-white focus:border-orange-500'
+                        : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-orange-500'
+                    }`}
+                  >
+                    {activeUsersExcludingGil.map(u => (
+                      <option key={u.username} value={u.username}>
+                        {u.name} (@{u.username})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Monthly Value Setting */}
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-2">Valor de Cadastro / Cobrança (Mensalidade)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] font-extrabold font-mono text-zinc-500">R$</span>
+                    <input
+                      type="number"
+                      value={paymentVal}
+                      onChange={(e) => setPaymentVal(Math.max(0, Number(e.target.value) || 0))}
+                      placeholder="150"
+                      className={`w-full py-2.5 pl-9 pr-4 rounded-xl border text-xs font-bold font-mono outline-none ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-orange-500'
+                          : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-orange-500'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Visible screens checkpoint */}
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-2 flex items-center gap-1.5">
+                    <LayoutGrid className="w-4 h-4 text-orange-400" /> Telas Visíveis (Menu de Navegação)
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mt-1">
+                    {[
+                      { id: 'dashboard', label: 'Dashboard' },
+                      { id: 'clientes', label: 'Clientes' },
+                      { id: 'calendario', label: 'Calendário / Agenda' },
+                      { id: 'relatorios', label: 'Laudos de Visitas' },
+                      { id: 'documentacao', label: 'Documentação' },
+                      { id: 'perfil', label: 'Perfil do Operador' },
+                      { id: 'configuracoes', label: 'Configurações Operador' },
+                    ].map((tab) => {
+                      const isChecked = screens.includes(tab.id);
+                      return (
+                        <label
+                          key={tab.id}
+                          className={`p-3 rounded-xl border text-left flex items-center gap-2.5 cursor-pointer transition-all ${
+                            isChecked
+                              ? 'bg-orange-600/10 border-orange-500 text-orange-500 font-bold'
+                              : 'bg-zinc-950/20 border-zinc-900 hover:border-zinc-800 text-zinc-400'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setScreens(screens.filter(s => s !== tab.id));
+                              } else {
+                                setScreens([...screens, tab.id]);
+                              }
+                            }}
+                            className="accent-orange-500 shrink-0"
+                          />
+                          <span className="text-[10px] font-bold tracking-tight">{tab.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Operations rules (can write vs read-only) */}
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-2">Permissão de Operações (O que poderão mudar)</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1.5">
+                    <div
+                      onClick={() => setCanModify(true)}
+                      className={`p-3.5 rounded-2xl border text-left flex items-start gap-4 cursor-pointer transition-all ${
+                        canModify
+                          ? 'bg-emerald-600/10 border-emerald-500 text-emerald-500'
+                          : 'bg-zinc-950/25 border-zinc-900 text-zinc-400'
+                      }`}
+                    >
+                      <Unlock className="w-5 h-5 mt-0.5 shrink-0 text-emerald-500" />
+                      <div>
+                        <h4 className="text-[11px] font-black uppercase tracking-wider">Habilitar Escrita Completa</h4>
+                        <p className="text-[9px] text-zinc-400 tracking-wide mt-0.5 leading-tight">Autorizado a adicionar, alterar, registrar laudos e apagar itens locais ou na nuvem.</p>
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => setCanModify(false)}
+                      className={`p-3.5 rounded-2xl border text-left flex items-start gap-4 cursor-pointer transition-all ${
+                        !canModify
+                          ? 'bg-amber-600/10 border-amber-500 text-amber-500'
+                          : 'bg-zinc-950/25 border-zinc-900 text-zinc-400'
+                      }`}
+                    >
+                      <Lock className="w-5 h-5 mt-0.5 shrink-0 text-amber-500" />
+                      <div>
+                        <h4 className="text-[11px] font-black uppercase tracking-wider">Exclusivo Leitura (Visualizador)</h4>
+                        <p className="text-[9px] text-zinc-400 tracking-wide mt-0.5 leading-tight">Modo restrito tipo auditoria. Botões de ação, salvar, excluir e novos registros do operador serão lacrados.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Call to save */}
+                <div className="pt-4 border-t border-zinc-900/10 dark:border-zinc-850 text-right">
+                  <button
+                    type="button"
+                    onClick={handleSaveUserConfig}
+                    className="px-5 py-2.5 bg-[#D35400] hover:bg-[#FC6B0A] text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all shadow-md shadow-[#D35400]/10 flex items-center justify-center gap-1.5 cursor-pointer ml-auto"
+                  >
+                    <ShieldCheck className="w-4 h-4" /> Gravar Alterações do Usuário
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

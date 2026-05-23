@@ -50,12 +50,12 @@ export default function LoginScreen({ onLoginSuccess, showToast, theme }: LoginS
         showToast('Este usuário já existe.', 'error');
       }
     } else {
-      const isValid = AGRESTE_DB.validateUser(username, password);
-      if (isValid) {
+      const authResult = AGRESTE_DB.validateUser(username, password);
+      if (authResult.valid) {
         showToast(`Bem-vindo, ${username}!`, 'success');
         onLoginSuccess(username);
       } else {
-        showToast('Credenciais incorretas.', 'error');
+        showToast(authResult.message || 'Credenciais incorretas.', 'error');
       }
     }
   };

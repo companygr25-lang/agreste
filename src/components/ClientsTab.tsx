@@ -17,15 +17,30 @@ interface ClientsTabProps {
   clients: Client[];
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   onRefreshData: () => void;
+  canEdit?: boolean;
 }
 
-export default function ClientsTab({ theme, clients, showToast, onRefreshData }: ClientsTabProps) {
+export default function ClientsTab({ theme, clients, showToast, onRefreshData, canEdit = true }: ClientsTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Custom filter states
+  const [selectedSize, setSelectedSize] = useState<'todos' | 'grande' | 'pequeno'>('todos');
+  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<'todos' | 'pago' | 'pendente'>('todos');
+  const [selectedCity, setSelectedCity] = useState('todas');
+
   // Modals visibility states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showVisitModal, setShowVisitModal] = useState<Client | null>(null);
   
+  // Edit client states
+  const [showEditModal, setShowEditModal] = useState<Client | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editCity, setEditCity] = useState('');
+  const [editResponsible, setEditResponsible] = useState('');
+  const [editSize, setEditSize] = useState<'grande' | 'pequeno'>('grande');
+  const [editPaymentStatus, setEditPaymentStatus] = useState<PaymentStatus>('pago');
+  const [showEditConfirm, setShowEditConfirm] = useState<{ original: Client; updated: Client } | null>(null);
+
   // Add client form states
   const [clientName, setClientName] = useState('');
   const [clientCity, setClientCity] = useState('');
@@ -100,6 +115,48 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData }:
     setDeleteConfirm({ id, name });
   };
 
+  // Edit client actions
+  const openEditModal = (client: Client) => {
+    setShowEditModal(client);
+    setEditName(client.name);
+    setEditCity(client.city);
+    setEditResponsible(client.responsible);
+    setEditSize(client.size);
+    setEditPaymentStatus(client.paymentStatus);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showEditModal) return;
+    if (!editName.trim() || !editCity.trim() || !editResponsible.trim()) {
+      showToast('Por favor, preencha todos os campos do cliente.', 'error');
+      return;
+    }
+
+    const updatedClient: Client = {
+      ...showEditModal,
+      name: editName,
+      city: editCity,
+      responsible: editResponsible,
+      size: editSize,
+      paymentStatus: editPaymentStatus,
+    };
+
+    setShowEditConfirm({
+      original: showEditModal,
+      updated: updatedClient,
+    });
+  };
+
+  const handleConfirmEditSave = () => {
+    if (!showEditConfirm) return;
+    AGRESTE_DB.updateClient(showEditConfirm.updated);
+    showToast(`Cliente "${showEditConfirm.updated.name}" atualizado com sucesso!`, 'success');
+    setShowEditConfirm(null);
+    setShowEditModal(null);
+    onRefreshData();
+  };
+
   // Open visit report dialog and seed default technician name
   const openVisitModal = (client: Client) => {
     setShowVisitModal(client);
@@ -143,14 +200,29 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData }:
     onRefreshData();
   };
 
-  // filter
+  // Extract unique cities list dynamically for options
+  const uniqueCities = Array.from(new Set(clients.map(c => c.city ? c.city.trim() : ''))).filter(Boolean).sort();
+
+  // Expanded complex filters
   const filteredClients = clients.filter((client) => {
-    const q = searchQuery.toLowerCase();
-    return (
+    // 1. Search Query
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch = !q || (
       client.name.toLowerCase().includes(q) ||
       client.city.toLowerCase().includes(q) ||
       client.responsible.toLowerCase().includes(q)
     );
+
+    // 2. Size
+    const matchesSize = selectedSize === 'todos' || client.size === selectedSize;
+
+    // 3. Payment Status
+    const matchesPayment = selectedPaymentStatus === 'todos' || client.paymentStatus === selectedPaymentStatus;
+
+    // 4. City
+    const matchesCity = selectedCity === 'todas' || client.city.trim().toLowerCase() === selectedCity.trim().toLowerCase();
+
+    return matchesSearch && matchesSize && matchesPayment && matchesCity;
   });
 
   return (
@@ -163,34 +235,134 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData }:
             Cadastre clientes, controle faturamento mensal e lance relatórios de visitas de controle de pragas.
           </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          id="add-client-btn"
-          className="flex items-center gap-2 bg-[#D35400] hover:bg-[#FC6B0A] text-white font-semibold text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-[#D35400]/10 cursor-pointer hover:scale-[1.01] transition-transform duration-100"
-        >
-          <PlusCircle className="w-4 h-4" /> Cadastrar Cliente
-        </button>
+        {canEdit && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            id="add-client-btn"
+            className="flex items-center gap-2 bg-[#D35400] hover:bg-[#FC6B0A] text-white font-semibold text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-[#D35400]/10 cursor-pointer hover:scale-[1.01] transition-transform duration-100"
+          >
+            <PlusCircle className="w-4 h-4" /> Cadastrar Cliente
+          </button>
+        )}
       </div>
 
       {/* Search and Filters */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-md">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500">
-            <Search className="w-5 h-5" />
-          </span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por cliente, cidade ou responsável..."
-            id="client-search-input"
-            className={`w-full py-2.5 pl-11 pr-4 rounded-xl border text-sm outline-none transition-all ${
-              theme === 'dark'
-                ? 'bg-[#1A1A1A] border-[#242424] text-white focus:border-[#D35400] focus:ring-1 focus:ring-[#D35400]'
-                : 'bg-white border-zinc-200 text-zinc-900 focus:border-[#D35400] focus:ring-1 focus:ring-[#D35400] shadow-sm'
-            }`}
-          />
+      <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'bg-[#141414]/60 border-zinc-805/40' : 'bg-zinc-50/50 border-zinc-200'} space-y-3`}>
+        <div className="flex flex-col md:flex-row gap-3">
+          {/* Main search bar */}
+          <div className="relative flex-1">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500">
+              <Search className="w-4 h-4" />
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por cliente, cidade ou responsável..."
+              id="client-search-input"
+              className={`w-full py-2 pl-10 pr-4 rounded-lg border text-xs outline-none transition-all ${
+                theme === 'dark'
+                  ? 'bg-[#1A1A1A]/90 border-[#242424] text-white focus:border-[#D35400] focus:ring-1 focus:ring-[#D35400]'
+                  : 'bg-white border-zinc-200 text-zinc-900 focus:border-[#D35400] focus:ring-1 focus:ring-[#D35400] shadow-sm'
+              }`}
+            />
+          </div>
+
+          {/* Porte Select Filter */}
+          <div className="w-full md:w-44 select-container">
+            <select
+              value={selectedSize}
+              onChange={(e) => setSelectedSize(e.target.value as any)}
+              id="filter-client-size"
+              className={`w-full py-2 px-3 rounded-lg border text-xs outline-none transition-all ${
+                theme === 'dark'
+                  ? 'bg-zinc-950 border-[#242424] text-zinc-300 focus:border-[#D35400]'
+                  : 'bg-white border-zinc-200 text-zinc-700 focus:border-[#D35400] shadow-sm'
+              }`}
+            >
+              <option value="todos">Porte: Todos</option>
+              <option value="grande">Grande Porte</option>
+              <option value="pequeno">Pequeno Porte</option>
+            </select>
+          </div>
+
+          {/* Status Pagamento Select Filter */}
+          <div className="w-full md:w-44 select-container">
+            <select
+              value={selectedPaymentStatus}
+              onChange={(e) => setSelectedPaymentStatus(e.target.value as any)}
+              id="filter-client-payment"
+              className={`w-full py-2 px-3 rounded-lg border text-xs outline-none transition-all ${
+                theme === 'dark'
+                  ? 'bg-zinc-950 border-[#242424] text-zinc-300 focus:border-[#D35400]'
+                  : 'bg-white border-zinc-200 text-zinc-700 focus:border-[#D35400] shadow-sm'
+              }`}
+            >
+              <option value="todos">Faturamento: Todos</option>
+              <option value="pago">Pago</option>
+              <option value="pendente">Pendente</option>
+            </select>
+          </div>
+
+          {/* Cidade Select Filter */}
+          <div className="w-full md:w-52 select-container">
+            <select
+              value={selectedCity}
+              onChange={(e) => setSelectedCity(e.target.value)}
+              id="filter-client-city"
+              className={`w-full py-2 px-3 rounded-lg border text-xs outline-none transition-all ${
+                theme === 'dark'
+                  ? 'bg-zinc-950 border-[#242424] text-zinc-300 focus:border-[#D35400]'
+                  : 'bg-white border-zinc-200 text-zinc-700 focus:border-[#D35400] shadow-sm'
+              }`}
+            >
+              <option value="todas">Cidades: Todas</option>
+              {uniqueCities.map(city => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+            </select>
+          </div>
         </div>
+
+        {/* Clear filters badge row */}
+        {(selectedSize !== 'todos' || selectedPaymentStatus !== 'todos' || selectedCity !== 'todas' || searchQuery) && (
+          <div className="flex items-center gap-2 pt-1.5 border-t border-dashed border-zinc-800/20 dark:border-zinc-800">
+            <span className="text-[10px] text-zinc-500 uppercase font-bold font-mono">Filtros Ativos:</span>
+            <div className="flex flex-wrap items-center gap-1.5 select-count">
+              {searchQuery && (
+                <span className="text-[9px] px-2 py-0.5 bg-orange-600/10 border border-orange-500/20 text-[#D35400] font-semibold rounded">
+                  Busca: "{searchQuery}"
+                </span>
+              )}
+              {selectedSize !== 'todos' && (
+                <span className="text-[9px] px-2 py-0.5 bg-orange-600/10 border border-orange-500/20 text-[#D35400] font-semibold rounded">
+                  Porte: {selectedSize === 'grande' ? 'Grande' : 'Pequeno'}
+                </span>
+              )}
+              {selectedPaymentStatus !== 'todos' && (
+                <span className="text-[9px] px-2 py-0.5 bg-orange-600/10 border border-orange-500/20 text-[#D35400] font-semibold rounded">
+                  Faturamento: {selectedPaymentStatus === 'pago' ? 'Pago' : 'Pendente'}
+                </span>
+              )}
+              {selectedCity !== 'todas' && (
+                <span className="text-[9px] px-2 py-0.5 bg-orange-600/10 border border-orange-500/20 text-[#D35400] font-semibold rounded">
+                  Cidade: {selectedCity}
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedSize('todos');
+                  setSelectedPaymentStatus('todos');
+                  setSelectedCity('todas');
+                }}
+                className="text-[9px] hover:underline font-bold text-zinc-500 hover:text-orange-500 pl-1.5 transition-colors cursor-pointer"
+              >
+                Limpar Todos
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Clients Cards Grid changed to elegant List Rows */}
@@ -244,7 +416,13 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData }:
                 <div className="flex flex-col items-start sm:items-end gap-1">
                   <span className="text-[9px] text-zinc-500 uppercase font-mono tracking-wider">Faturamento</span>
                   <button
-                    onClick={() => handleTogglePayment(client)}
+                    onClick={() => {
+                      if (!canEdit) {
+                        showToast('Você possui apenas permissão de visualização (Leitura).', 'error');
+                        return;
+                      }
+                      handleTogglePayment(client);
+                    }}
                     className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
                       client.paymentStatus === 'pago'
                         ? 'bg-emerald-600/15 border border-emerald-500/20 text-emerald-400'
@@ -256,19 +434,32 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData }:
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => openVisitModal(client)}
-                    className="px-3 py-2 bg-[#D35400]/10 hover:bg-[#D35400] text-[#D35400] hover:text-white border border-[#D35400]/20 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <ClipboardList className="w-4 h-4 text-[#D35400] hover:text-white" /> <span>Realizar Visita</span>
-                  </button>
-                  <button
-                    onClick={() => handleDeleteClient(client.id, client.name)}
-                    className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded-xl transition-colors cursor-pointer"
-                    title="Excluir Cliente"
-                  >
-                    <Trash2 className="w-4.5 h-4.5" />
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() => openVisitModal(client)}
+                      className="px-3 py-2 bg-[#D35400]/10 hover:bg-[#D35400] text-[#D35400] hover:text-white border border-[#D35400]/20 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <ClipboardList className="w-4 h-4 text-[#D35400] hover:text-white" /> <span>Realizar Visita</span>
+                    </button>
+                  )}
+                  {canEdit && (
+                    <button
+                      onClick={() => openEditModal(client)}
+                      className="p-2 hover:bg-[#D35400]/15 text-zinc-500 hover:text-[#D35400] rounded-xl transition-colors cursor-pointer"
+                      title="Editar Cliente"
+                    >
+                      <Edit className="w-4.5 h-4.5" />
+                    </button>
+                  )}
+                  {canEdit && (
+                    <button
+                      onClick={() => handleDeleteClient(client.id, client.name)}
+                      className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded-xl transition-colors cursor-pointer"
+                      title="Excluir Cliente"
+                    >
+                      <Trash2 className="w-4.5 h-4.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -809,6 +1000,235 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData }:
                   className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-md"
                 >
                   Confirmar Exclusão
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL 4: EDIT CLIENT */}
+      <AnimatePresence>
+        {showEditModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowEditModal(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs"
+            />
+
+            {/* Modal Body */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className={`relative w-full max-w-md rounded-2xl border p-6 shadow-2xl z-10 ${
+                theme === 'dark' ? 'bg-[#1A1A1A] border-[#242424] text-white' : 'bg-white border-zinc-200 text-zinc-900'
+              }`}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold font-display">Editar Dados do Cliente</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(null)}
+                  id="edit-cli-modal-close"
+                  className="text-zinc-500 hover:text-white p-1 hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleEditSubmit} className="space-y-4" id="edit-client-form">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-2 text-zinc-400">
+                    Razão Social ou Nome do Favorecido *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Ex: Panificadora Central Ltda."
+                    id="edit-client-name"
+                    className={`w-full py-2.5 px-4 rounded-xl border text-sm outline-none transition-all ${
+                      theme === 'dark'
+                        ? 'bg-zinc-950 border-[#242424] text-white focus:border-[#D35400]'
+                        : 'bg-zinc-100 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                    }`}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider mb-2 text-zinc-400">
+                      Cidade Atendida *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editCity}
+                      onChange={(e) => setEditCity(e.target.value)}
+                      placeholder="Ex: Caruaru"
+                      id="edit-client-city"
+                      className={`w-full py-2.5 px-4 rounded-xl border text-sm outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-[#242424] text-white focus:border-[#D35400]'
+                          : 'bg-zinc-100 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider mb-2 text-zinc-400">
+                      Responsável / Contato *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editResponsible}
+                      onChange={(e) => setEditResponsible(e.target.value)}
+                      placeholder="Ex: João da Silva"
+                      id="edit-client-responsible"
+                      className={`w-full py-2.5 px-4 rounded-xl border text-sm outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-[#242424] text-white focus:border-[#D35400]'
+                          : 'bg-zinc-100 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-2 text-zinc-400">
+                    Porte do Estabelecimento *
+                  </label>
+                  <div className="flex gap-3 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditSize('grande')}
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase border cursor-pointer ${
+                        editSize === 'grande'
+                          ? 'bg-[#D35400]/20 border-[#D35400] text-[#D35400]'
+                          : theme === 'dark' ? 'bg-zinc-950 border-[#242424] text-zinc-500' : 'bg-zinc-100 border-zinc-200 text-zinc-500'
+                      }`}
+                    >
+                      Grande Porte
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditSize('pequeno')}
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase border cursor-pointer ${
+                        editSize === 'pequeno'
+                          ? 'bg-[#D35400]/20 border-[#D35400] text-[#D35400]'
+                          : theme === 'dark' ? 'bg-zinc-950 border-[#242424] text-zinc-500' : 'bg-zinc-100 border-zinc-250 text-zinc-500'
+                      }`}
+                    >
+                      Pequeno Porte
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-2 text-zinc-400">
+                    Status Financeiro / Faturamento *
+                  </label>
+                  <div className="flex gap-3 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditPaymentStatus('pago')}
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase border cursor-pointer ${
+                        editPaymentStatus === 'pago'
+                          ? 'bg-emerald-600/10 border-emerald-600 text-emerald-400'
+                          : theme === 'dark' ? 'bg-zinc-950/20 border-[#242424] text-zinc-500' : 'bg-zinc-100 border-zinc-200 text-zinc-500'
+                      }`}
+                    >
+                      Pago
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditPaymentStatus('pendente')}
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase border cursor-pointer ${
+                        editPaymentStatus === 'pendente'
+                          ? 'bg-red-600/10 border-red-600 text-red-400'
+                          : theme === 'dark' ? 'bg-zinc-950/20 border-[#242424] text-zinc-500' : 'bg-zinc-100 border-zinc-200 text-zinc-500'
+                      }`}
+                    >
+                      Pendente
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(null)}
+                    className="flex-1 py-2.5 border border-zinc-805/40 dark:border-zinc-800 text-zinc-400 hover:text-white rounded-xl transition-all cursor-pointer text-xs font-bold uppercase"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    id="save-edited-client-btn"
+                    className="flex-1 py-2.5 bg-[#D35400] hover:bg-[#FC6B0A] text-white font-bold text-xs uppercase rounded-xl cursor-pointer"
+                  >
+                    Salvar Alterações
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL 5: EDIT ACTION CONFIRMATION OVERLAY */}
+      <AnimatePresence>
+        {showEditConfirm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowEditConfirm(null)}
+              className="absolute inset-0 bg-black/85 backdrop-blur-xs"
+            />
+
+            {/* Modal Content */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className={`relative w-full max-w-sm rounded-2xl border p-6 shadow-2xl z-10 text-center ${
+                theme === 'dark' ? 'bg-[#1a1a1a] border-[#D35400]/30 text-white' : 'bg-white border-zinc-200 text-zinc-900'
+              }`}
+            >
+              <div className="mx-auto w-12 h-12 bg-[#D35400]/10 text-[#D35400] rounded-full flex items-center justify-center mb-4">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+
+              <h3 className="font-bold text-lg font-display mb-1">Confirmar Alterações</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed mb-6">
+                Deseja confirmar e aplicar as atualizações cadastrais do cliente <span className="font-bold text-[#FC6B0A]">"{showEditConfirm.updated.name}"</span>? 
+                Isso alterará as informações de faturamento e exibição em todo o sistema.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3 justify-center">
+                <button
+                  type="button"
+                  onClick={() => setShowEditConfirm(null)}
+                  className="px-4 py-2 hover:bg-zinc-800 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmEditSave}
+                  className="px-4 py-2 bg-[#D35400] hover:bg-[#FC6B0A] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-md"
+                >
+                  Sim, Confirmar
                 </button>
               </div>
             </motion.div>

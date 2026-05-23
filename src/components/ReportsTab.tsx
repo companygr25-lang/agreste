@@ -17,9 +17,10 @@ interface ReportsTabProps {
   reports: VisitReport[];
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   onRefreshData: () => void;
+  canEdit?: boolean;
 }
 
-export default function ReportsTab({ theme, reports, showToast, onRefreshData }: ReportsTabProps) {
+export default function ReportsTab({ theme, reports, showToast, onRefreshData, canEdit = true }: ReportsTabProps) {
   // Filter states
   const [filterClient, setFilterClient] = useState('');
   const [filterCity, setFilterCity] = useState('');
@@ -443,14 +444,16 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData }:
                   >
                     <Download className="w-4 h-4" /> Baixar PDF
                   </button>
-                  <button
-                    onClick={() => handleDeleteReport(rep.id, rep.clientName, rep.date)}
-                    id={`delete-rep-${rep.id}`}
-                    className="p-2 border border-zinc-800 text-zinc-500 hover:text-red-500 rounded-xl hover:bg-zinc-950/20 transition-colors cursor-pointer"
-                    title="Excluir Relatório"
-                  >
-                    <Trash2 className="w-4.5 h-4.5" />
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() => handleDeleteReport(rep.id, rep.clientName, rep.date)}
+                      id={`delete-rep-${rep.id}`}
+                      className="p-2 border border-zinc-800 text-zinc-500 hover:text-red-500 rounded-xl hover:bg-zinc-950/20 transition-colors cursor-pointer"
+                      title="Excluir Relatório"
+                    >
+                      <Trash2 className="w-4.5 h-4.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

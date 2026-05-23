@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Client, CompanyDocument, UserProfile } from '../types';
+import { AGRESTE_DB } from '../services/db';
 
 interface SidebarProps {
   theme: 'light' | 'dark';
@@ -19,10 +20,11 @@ interface SidebarProps {
   profile: UserProfile;
   clients: Client[];
   documents: CompanyDocument[];
+  currentUser?: string | null;
 }
 
 export default function Sidebar({ 
-  theme, activeTab, setActiveTab, onLogout, profile, clients, documents 
+  theme, activeTab, setActiveTab, onLogout, profile, clients, documents, currentUser 
 }: SidebarProps) {
   const logoUrl = 'https://i.postimg.cc/W3fG6xMt/Whats-App-Image-2026-05-21-at-16-33-40.jpg';
 
@@ -38,8 +40,17 @@ export default function Sidebar({
   };
   const pendingDocsCount = documents.filter(d => d.status === 'pendente' || isCloseToExpiration(d.nextUpdateDate)).length;
 
-  const menuItems = [
+  const normalizedUser = currentUser?.toLowerCase() || '';
+  const isProvider = normalizedUser === 'gil silva';
+  
+  // Custom screens from DB
+  const userDetails = AGRESTE_DB.getUserDetails();
+  const currentDetails = userDetails[normalizedUser];
+  const allowedTabs = currentDetails?.allowedTabs || ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'perfil', 'configuracoes'];
+
+  const allMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <Building2 className="w-4.5 h-4.5" /> },
+    { id: 'usuarios', label: 'Usuários', icon: <Users className="w-4.5 h-4.5" /> },
     { 
       id: 'clientes', 
       label: 'Clientes', 
@@ -63,8 +74,10 @@ export default function Sidebar({
       ) : null
     },
     { id: 'perfil', label: 'Meu Perfil', icon: <User className="w-4.5 h-4.5" /> },
-    { id: 'configuracoes', label: 'Configurações', icon: <Settings className="w-4.5 h-4.5" /> },
+    { id: 'configuracoes', label: isProvider ? 'Configuração' : 'Configurações', icon: <Settings className="w-4.5 h-4.5" /> },
   ];
+
+  const menuItems = allMenuItems.filter(item => allowedTabs.includes(item.id));
 
   return (
     <>

@@ -21,6 +21,7 @@ interface DashboardTabProps {
   setActiveTab: (tab: string) => void;
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   onRefreshData: () => void;
+  currentUser?: string | null;
 }
 
 interface TechnicalObjective {
@@ -32,7 +33,7 @@ interface TechnicalObjective {
 }
 
 export default function DashboardTab({ 
-  theme, clients, reports, documents, setActiveTab, showToast, onRefreshData 
+  theme, clients, reports, documents, setActiveTab, showToast, onRefreshData, currentUser 
 }: DashboardTabProps) {
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
 
@@ -163,6 +164,254 @@ export default function DashboardTab({
   const maxVisits = Math.max(...weeklyData.map(d => d.visits), 1);
   const chartHeight = 140;
 
+  const userDetails = AGRESTE_DB.getUserDetails();
+  const currentDetail = currentUser ? userDetails[currentUser.toLowerCase().trim()] : null;
+  const currentName = currentDetail?.name || currentUser || 'OPERADOR';
+  const currentDateStr = new Date().toLocaleDateString('pt-BR');
+  const isProvider = currentUser?.toLowerCase() === 'gil silva';
+
+  if (isProvider) {
+    const detailsDict = AGRESTE_DB.getUserDetails();
+    const usersListExcludingGil = Object.values(detailsDict).filter(u => u.username !== 'gil silva');
+    
+    const activeUsers = usersListExcludingGil.filter(u => u.status === 'approved');
+    const totalActiveCount = activeUsers.length;
+    const pendingCount = usersListExcludingGil.filter(u => u.status === 'pending').length;
+    
+    const totalIncomeFuture = activeUsers.reduce((acc, u) => acc + (u.paymentValue || 0), 0);
+    const paidIncome = activeUsers.filter(u => u.paymentStatus === 'pago').reduce((acc, u) => acc + (u.paymentValue || 0), 0);
+    const pendingIncome = activeUsers.filter(u => u.paymentStatus === 'pendente').reduce((acc, u) => acc + (u.paymentValue || 0), 0);
+
+    const handleTogglePayment = (username: string) => {
+      const updated = { ...detailsDict };
+      if (updated[username]) {
+        const currentStatus = updated[username].paymentStatus;
+        const nextStatus = currentStatus === 'pago' ? 'pendente' : 'pago';
+        updated[username].paymentStatus = nextStatus;
+        AGRESTE_DB.saveUserDetails(updated);
+        showToast(`Mensalidade de '${updated[username].name}' marcada como ${nextStatus.toUpperCase()}!`, 'success');
+        onRefreshData();
+      }
+    };
+
+    return (
+      <div className="space-y-6 animate-fade-in" id="provider-dashboard-view">
+        {/* Welcome Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-zinc-900/10 dark:border-zinc-800/40 pb-5 text-left">
+          <div>
+            <h2 className="text-2xl font-black font-display tracking-tight text-[#D35400] uppercase flex items-center gap-2">
+              <Landmark className="w-6 h-6 shrink-0 text-[#D35400]" /> PAINEL DO PROVEDOR
+            </h2>
+            <p className="text-xs text-zinc-500 font-medium font-sans">
+              Gerencie a cobrança das licenças, faturamento de mensalidades ativos e status de contas.
+            </p>
+          </div>
+          <div className="text-right flex flex-col items-start md:items-end font-mono">
+            <span className="text-[11px] font-bold tracking-wider text-[#D35400] uppercase">
+              GIL SILVA • ADMINISTRADOR
+            </span>
+            <span className="text-[9px] font-extrabold text-[#D35400]/85 uppercase tracking-wider mt-0.5">
+              PROVEDOR DO SISTEMA
+            </span>
+          </div>
+        </div>
+
+        {/* Stats and Financial Summary */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <div className={`p-4 rounded-2xl border ${
+            theme === 'dark' ? 'bg-[#151515] border-zinc-900' : 'bg-white border-zinc-200 shadow-sm'
+          } text-left flex items-center justify-between`}>
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block">Usuários Ativos</span>
+              <span className="text-3xl font-extrabold font-mono text-orange-500 mt-1 block">
+                {String(totalActiveCount).padStart(2, '0')}
+              </span>
+              <span className="text-[10px] text-zinc-500 block mt-1 font-sans">Limite: {AGRESTE_DB.getLicensesLimit()} acessos</span>
+            </div>
+            <Users className="w-8 h-8 text-orange-500/15" />
+          </div>
+
+          <div className={`p-4 rounded-2xl border ${
+            theme === 'dark' ? 'bg-[#151515] border-zinc-900' : 'bg-white border-zinc-200 shadow-sm'
+          } text-left flex items-center justify-between`}>
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block">Faturamento Estimado</span>
+              <span className="text-3xl font-extrabold font-mono text-emerald-500 mt-1 block">
+                R$ {totalIncomeFuture}
+              </span>
+              <span className="text-[10px] text-zinc-500 block mt-1 font-sans">Valor teórico mensal</span>
+            </div>
+            <TrendingUp className="w-8 h-8 text-emerald-500/15" />
+          </div>
+
+          <div className={`p-4 rounded-2xl border ${
+            theme === 'dark' ? 'bg-[#151515] border-zinc-900' : 'bg-white border-zinc-200 shadow-sm'
+          } text-left flex items-center justify-between`}>
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block">Mensalidades Recebidas</span>
+              <span className="text-3xl font-extrabold font-mono text-emerald-500 mt-1 block">
+                R$ {paidIncome}
+              </span>
+              <span className="text-[10px] text-emerald-500 font-bold block mt-1 font-sans font-medium">Status: Pago</span>
+            </div>
+            <CheckCircle2 className="w-8 h-8 text-emerald-500/15" />
+          </div>
+
+          <div className={`p-4 rounded-2xl border ${
+            theme === 'dark' ? 'bg-[#151515] border-zinc-900' : 'bg-white border-zinc-200 shadow-sm'
+          } text-left flex items-center justify-between`}>
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block">Mensalidades Pendentes</span>
+              <span className="text-3xl font-extrabold font-mono text-red-500 mt-1 block">
+                R$ {pendingIncome}
+              </span>
+              <span className="text-[10px] text-red-500 font-extrabold block mt-1 font-sans">Cobrança pendente</span>
+            </div>
+            <Clock className="w-8 h-8 text-red-500/15" />
+          </div>
+        </div>
+
+        {/* Dashboard Grid body */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main accounts / Licences list (Span 2) */}
+          <div className={`lg:col-span-2 p-5 rounded-2xl border ${
+            theme === 'dark' ? 'bg-[#151515] border-zinc-900' : 'bg-white border-zinc-200 shadow-sm'
+          } text-left`}>
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-zinc-900/10 dark:border-zinc-800/40">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-orange-500 flex items-center gap-1.5">
+                Contratos & Licenças Ativos
+              </h3>
+              <button
+                type="button"
+                onClick={() => setActiveTab('usuarios')}
+                className="text-[10px] font-bold text-zinc-400 hover:text-orange-500 flex items-center gap-1 cursor-pointer transition-colors uppercase tracking-wider"
+              >
+                Liberar Usuários <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {activeUsers.length === 0 ? (
+              <div className="py-12 text-center text-zinc-500 text-xs font-semibold font-sans">
+                Nenhum usuário ativo contratado.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-zinc-900/10 dark:border-zinc-800/40 text-[10px] uppercase font-bold text-zinc-400">
+                      <th className="pb-3 pt-1">Operador</th>
+                      <th className="pb-3 pt-1">Usuário</th>
+                      <th className="pb-3 pt-1 text-right">Mensalidade</th>
+                      <th className="pb-3 pt-1 text-center">Status Pagamento</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-900/10 dark:divide-zinc-800/40 text-xs text-left">
+                    {activeUsers.map(user => (
+                      <tr key={user.username} className="hover:bg-zinc-900/5 dark:hover:bg-zinc-900/10 transition-colors">
+                        <td className="py-3 font-extrabold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-orange-600/10 flex items-center justify-center text-[10px] text-orange-500 font-bold uppercase shrink-0">
+                            {user.name.charAt(0)}
+                          </div>
+                          {user.name}
+                        </td>
+                        <td className="py-3 text-zinc-500 font-mono">@{user.username}</td>
+                        <td className="py-3">
+                          <div className="flex items-center justify-end gap-1 font-mono font-bold text-emerald-500">
+                            <span className="text-zinc-500 text-[10px]">R$</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={user.paymentValue !== undefined ? user.paymentValue : 150}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                const updated = { ...detailsDict };
+                                if (updated[user.username]) {
+                                  updated[user.username].paymentValue = val;
+                                  AGRESTE_DB.saveUserDetails(updated);
+                                  onRefreshData();
+                                }
+                              }}
+                              className="w-16 px-1.5 py-0.5 text-xs text-emerald-500 bg-zinc-950/40 border border-zinc-900 rounded outline-none text-right focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-mono"
+                            />
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              type="button; button"
+                              onClick={() => handleTogglePayment(user.username)}
+                              className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg border transition-all cursor-pointer flex items-center gap-1 ${
+                                user.paymentStatus === 'pago'
+                                  ? 'bg-emerald-600/10 border-emerald-500/15 text-emerald-400 hover:bg-emerald-650/20'
+                                  : 'bg-red-600/10 border-red-500/15 text-red-500 hover:bg-red-650/20 animate-pulse'
+                              }`}
+                            >
+                              {user.paymentStatus === 'pago' ? (
+                                <><Check className="w-3 h-3 text-emerald-400" /> Pago</>
+                              ) : (
+                                <><Clock className="w-3 h-3 text-red-500" /> Pendente</>
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Actions & Notifications Sidebar (Span 1) */}
+          <div className="space-y-4 lg:col-span-1">
+            {pendingCount > 0 && (
+              <div className="p-4 bg-amber-600/10 text-amber-500 border border-amber-500/20 rounded-2xl flex flex-col gap-3 text-left animate-pulse">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-amber-500 shrink-0" />
+                  <div>
+                    <h4 className="text-xs font-extrabold uppercase tracking-widest leading-none">Solicitações Registradas</h4>
+                    <p className="text-[10px] text-zinc-400 mt-1 lines-clamp-2 leading-tight">Existe(m) {pendingCount} operador(es) pendente(s) de liberação no sistema.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('usuarios')}
+                  className="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-wider cursor-pointer text-center transition-all"
+                >
+                  Liberar Acessos
+                </button>
+              </div>
+            )}
+
+            <div className={`p-4 rounded-2xl border ${
+              theme === 'dark' ? 'bg-[#151515] border-zinc-900' : 'bg-white border-zinc-200'
+            } text-left`}>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-orange-500 mb-3 flex items-center gap-1.5 border-b border-zinc-900/10 dark:border-zinc-800/40 pb-2">
+                <Sparkles className="w-4 h-4 shrink-0" /> Visão Provedor
+              </h3>
+
+              <div className="space-y-3.5 text-xs font-sans">
+                <div className="p-3 bg-zinc-950/25 border border-zinc-900/30 rounded-xl">
+                  <span className="text-[9px] uppercase font-bold text-zinc-500 block">Sincronização Cloud</span>
+                  <p className="text-zinc-400 mt-1 font-medium leading-relaxed">
+                    Sincronia ativa real-time. Qualquer liberação é enviada instantaneamente para todos os dispositivos de trabalho.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-zinc-950/25 border border-zinc-900/30 rounded-xl">
+                  <span className="text-[9px] uppercase font-bold text-zinc-500 block">Configuração de Telas</span>
+                  <p className="text-zinc-400 mt-1 font-medium leading-relaxed">
+                    Personalize o acesso a cada aba, limite de licenças e restrições de escrita de cada operador de forma independente na aba <strong className="text-orange-500">Configuração</strong>.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       {/* Welcome Banner */}
@@ -177,10 +426,10 @@ export default function DashboardTab({
         </div>
         <div className="text-right flex flex-col items-start md:items-end font-mono">
           <span className="text-[11px] font-bold tracking-wider text-[#D35400] uppercase">
-            22/05/2026 • ANDRÉ ALMEIDA
+            {currentDateStr} • {currentName}
           </span>
           <span className="text-[9px] font-extrabold text-zinc-400 dark:text-zinc-500 tracking-widest uppercase mt-0.5">
-            RESP.
+            RESPONSÁVEL OPERACIONAL
           </span>
         </div>
       </div>
@@ -356,106 +605,114 @@ export default function DashboardTab({
           </div>
 
           {/* SVG Custom High-Polished Chart */}
-          <div className="relative w-full overflow-hidden" style={{ height: `${chartHeight + 25}px` }}>
-            <svg 
-              className="w-full h-full" 
-              viewBox={`0 0 500 ${chartHeight + 15}`} 
-              preserveAspectRatio="none"
-              id="productivity-svg-chart-refined"
-            >
-              {/* Grid lines */}
-              {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => {
-                const y = chartHeight * ratio;
-                return (
-                  <line
-                    key={index}
-                    x1="0"
-                    y1={y}
-                    x2="490"
-                    y2={y}
-                    stroke={theme === 'dark' ? '#222222' : '#f0f0f0'}
-                    strokeDasharray="3 3"
-                    strokeWidth="1"
-                  />
-                );
-              })}
-
-              {/* Chart Bars with burnt orange/rust amber */}
-              {weeklyData.map((data, idx) => {
-                const colWidth = 490 / weeklyData.length;
-                const barWidth = 18;
-                const barHeight = (data.visits / maxVisits) * chartHeight;
-                const x = idx * colWidth + (colWidth - barWidth) / 2;
-                const y = chartHeight - barHeight;
-
-                const isHovered = hoveredBar === idx;
-
-                return (
-                  <g key={idx}>
-                    {/* Background trigger bar for tooltips */}
-                    <rect
-                      x={idx * colWidth}
-                      y="0"
-                      width={colWidth}
-                      height={chartHeight}
-                      fill="transparent"
-                      className="cursor-pointer"
-                      onMouseEnter={() => setHoveredBar(idx)}
-                      onMouseLeave={() => setHoveredBar(null)}
-                    />
-
-                    {/* Styled rounded column */}
-                    <rect
-                      x={x}
-                      y={y}
-                      width={barWidth}
-                      height={Math.max(barHeight, 3)}
-                      rx={2}
-                      fill={isHovered ? '#FC6B0A' : '#D35400'}
-                      className="transition-all duration-100 shadow-sm cursor-pointer"
-                      onMouseEnter={() => setHoveredBar(idx)}
-                      onMouseLeave={() => setHoveredBar(null)}
-                    />
-
-                    {/* Bar top badge count */}
-                    {data.visits > 0 && (
-                      <text
-                        x={x + barWidth / 2}
-                        y={y - 5}
-                        textAnchor="middle"
-                        fill={theme === 'dark' ? '#E4E4E7' : '#1F2937'}
-                        className="text-[9px] font-bold font-mono"
-                      >
-                        {data.visits}
-                      </text>
-                    )}
-
-                    {/* X Axis Labels */}
-                    <text
-                      x={idx * colWidth + colWidth / 2}
-                      y={chartHeight + 12}
-                      textAnchor="middle"
-                      fill={theme === 'dark' ? '#71717A' : '#6B7280'}
-                      className="text-[10px] font-mono font-bold"
-                    >
-                      {data.label}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-
-            {/* Custom Interactive Tooltip Banner */}
-            {hoveredBar !== null && (
-              <div 
-                className="absolute top-1 right-2 p-1.5 bg-[#141414] border border-[#D35400]/50 rounded-sm text-white text-[10px] font-mono shadow-md z-10"
+          {reports.length === 0 ? (
+            <div className="flex flex-col items-center justify-center text-center py-10 border border-dashed border-zinc-805/40 dark:border-zinc-800 rounded-xl bg-zinc-950/20 px-4" style={{ height: `${chartHeight}px` }}>
+              <TrendingUp className="w-8 h-8 text-[#D35400]/40 mb-1.5 shrink-0" />
+              <p className="text-[11px] font-bold text-zinc-400">Nenhum laudo ou visita registrada</p>
+              <p className="text-[9px] text-zinc-500 max-w-[280px] mt-0.5">Os laudos lançados no distrito alimentarão este gráfico automaticamente.</p>
+            </div>
+          ) : (
+            <div className="relative w-full overflow-hidden" style={{ height: `${chartHeight + 25}px` }}>
+              <svg 
+                className="w-full h-full" 
+                viewBox={`0 0 500 ${chartHeight + 15}`} 
+                preserveAspectRatio="none"
+                id="productivity-svg-chart-refined"
               >
-                <div className="font-bold text-[#FC6B0A]">{weeklyData[hoveredBar].label === 'Seg' ? 'Segunda-feira' : weeklyData[hoveredBar].label === 'Ter' ? 'Terça-feira' : weeklyData[hoveredBar].label === 'Qua' ? 'Quarta-feira' : weeklyData[hoveredBar].label === 'Qui' ? 'Quinta-feira' : weeklyData[hoveredBar].label === 'Sex' ? 'Sexta-feira' : weeklyData[hoveredBar].label === 'Sáb' ? 'Sábado' : 'Domingo'}</div>
-                <div>Visitas: <span className="font-bold">{weeklyData[hoveredBar].visits}</span></div>
-                <div>Eficácia: <span className="font-bold text-emerald-400">{weeklyData[hoveredBar].compliance}%</span></div>
-              </div>
-            )}
-          </div>
+                {/* Grid lines */}
+                {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => {
+                  const y = chartHeight * ratio;
+                  return (
+                    <line
+                      key={index}
+                      x1="0"
+                      y1={y}
+                      x2="490"
+                      y2={y}
+                      stroke={theme === 'dark' ? '#222222' : '#f0f0f0'}
+                      strokeDasharray="3 3"
+                      strokeWidth="1"
+                    />
+                  );
+                })}
+
+                {/* Chart Bars with burnt orange/rust amber */}
+                {weeklyData.map((data, idx) => {
+                  const colWidth = 490 / weeklyData.length;
+                  const barWidth = 18;
+                  const barHeight = (data.visits / maxVisits) * chartHeight;
+                  const x = idx * colWidth + (colWidth - barWidth) / 2;
+                  const y = chartHeight - barHeight;
+
+                  const isHovered = hoveredBar === idx;
+
+                  return (
+                    <g key={idx}>
+                      {/* Background trigger bar for tooltips */}
+                      <rect
+                        x={idx * colWidth}
+                        y="0"
+                        width={colWidth}
+                        height={chartHeight}
+                        fill="transparent"
+                        className="cursor-pointer"
+                        onMouseEnter={() => setHoveredBar(idx)}
+                        onMouseLeave={() => setHoveredBar(null)}
+                      />
+
+                      {/* Styled rounded column */}
+                      <rect
+                        x={x}
+                        y={y}
+                        width={barWidth}
+                        height={Math.max(barHeight, 3)}
+                        rx={2}
+                        fill={isHovered ? '#FC6B0A' : '#D35400'}
+                        className="transition-all duration-100 shadow-sm cursor-pointer"
+                        onMouseEnter={() => setHoveredBar(idx)}
+                        onMouseLeave={() => setHoveredBar(null)}
+                      />
+
+                      {/* Bar top badge count */}
+                      {data.visits > 0 && (
+                        <text
+                          x={x + barWidth / 2}
+                          y={y - 5}
+                          textAnchor="middle"
+                          fill={theme === 'dark' ? '#E4E4E7' : '#1F2937'}
+                          className="text-[9px] font-bold font-mono"
+                        >
+                          {data.visits}
+                        </text>
+                      )}
+
+                      {/* X Axis Labels */}
+                      <text
+                        x={idx * colWidth + colWidth / 2}
+                        y={chartHeight + 12}
+                        textAnchor="middle"
+                        fill={theme === 'dark' ? '#71717A' : '#6B7280'}
+                        className="text-[10px] font-mono font-bold"
+                      >
+                        {data.label}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+
+              {/* Custom Interactive Tooltip Banner */}
+              {hoveredBar !== null && (
+                <div 
+                  className="absolute top-1 right-2 p-1.5 bg-[#141414] border border-[#D35400]/50 rounded-sm text-white text-[10px] font-mono shadow-md z-10"
+                >
+                  <div className="font-bold text-[#FC6B0A]">{weeklyData[hoveredBar].label === 'Seg' ? 'Segunda-feira' : weeklyData[hoveredBar].label === 'Ter' ? 'Terça-feira' : weeklyData[hoveredBar].label === 'Qua' ? 'Quarta-feira' : weeklyData[hoveredBar].label === 'Qui' ? 'Quinta-feira' : weeklyData[hoveredBar].label === 'Sex' ? 'Sexta-feira' : weeklyData[hoveredBar].label === 'Sáb' ? 'Sábado' : 'Domingo'}</div>
+                  <div>Visitas: <span className="font-bold">{weeklyData[hoveredBar].visits}</span></div>
+                  <div>Eficácia: <span className="font-bold text-emerald-400">{weeklyData[hoveredBar].compliance}%</span></div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* High-Contrast Pending Payments Block */}

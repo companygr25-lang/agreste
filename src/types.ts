@@ -15,6 +15,16 @@ export interface UserProfile {
   photoUrl: string;
 }
 
+export interface SystemUserDetail {
+  username: string;
+  name: string;
+  status: 'pending' | 'approved' | 'blocked';
+  paymentStatus: PaymentStatus;
+  paymentValue: number;
+  allowedTabs: string[];
+  canEditData?: boolean;
+}
+
 export interface Client {
   id: string;
   code: string; // e.g. "001"

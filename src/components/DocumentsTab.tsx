@@ -17,10 +17,11 @@ interface DocumentsTabProps {
   documents: CompanyDocument[];
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   onRefreshData: () => void;
+  canEdit?: boolean;
 }
 
 export default function DocumentsTab({ 
-  theme, documents, showToast, onRefreshData 
+  theme, documents, showToast, onRefreshData, canEdit = true 
 }: DocumentsTabProps) {
   const [showDocModal, setShowDocModal] = useState(false);
   const [editingDoc, setEditingDoc] = useState<CompanyDocument | null>(null);
@@ -118,13 +119,15 @@ export default function DocumentsTab({
             Gestão de laudos ambientais, alvará de funcionamento sanitário da AGRESTE, químicos responsáveis e obrigações recorrentes.
           </p>
         </div>
-        <button
-          onClick={handleOpenNew}
-          id="add-doc-btn"
-          className="flex items-center gap-2 bg-[#D35400] hover:bg-[#FC6B0A] text-white font-semibold text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-[#D35400]/10 cursor-pointer hover:scale-[1.01] transition-transform duration-100"
-        >
-          <PlusCircle className="w-4 h-4" /> Anexar Licença / Alvará
-        </button>
+        {canEdit && (
+          <button
+            onClick={handleOpenNew}
+            id="add-doc-btn"
+            className="flex items-center gap-2 bg-[#D35400] hover:bg-[#FC6B0A] text-white font-semibold text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-[#D35400]/10 cursor-pointer hover:scale-[1.01] transition-transform duration-100"
+          >
+            <PlusCircle className="w-4 h-4" /> Anexar Licença / Alvará
+          </button>
+        )}
       </div>
 
       {/* Documents Table Checklist Layout */}
@@ -195,24 +198,26 @@ export default function DocumentsTab({
                         {validity.text}
                       </td>
                       <td className="py-4.5 px-6 text-right">
-                        <div className="flex justify-end gap-1">
-                          <button
-                            onClick={() => handleOpenEdit(doc)}
-                            id={`edit-doc-${doc.id}`}
-                            className="p-1.5 text-zinc-500 hover:text-orange-500 hover:bg-zinc-800/30 rounded-lg transition-colors cursor-pointer"
-                            title="Editar Licença"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteDoc(doc.id, doc.name)}
-                            id={`delete-doc-${doc.id}`}
-                            className="p-1.5 text-zinc-500 hover:text-red-500 hover:bg-zinc-800/30 rounded-lg transition-colors cursor-pointer"
-                            title="Remover Licença"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                        {canEdit && (
+                          <div className="flex justify-end gap-1">
+                            <button
+                              onClick={() => handleOpenEdit(doc)}
+                              id={`edit-doc-${doc.id}`}
+                              className="p-1.5 text-zinc-500 hover:text-orange-500 hover:bg-zinc-800/30 rounded-lg transition-colors cursor-pointer"
+                              title="Editar Licença"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDoc(doc.id, doc.name)}
+                              id={`delete-doc-${doc.id}`}
+                              className="p-1.5 text-zinc-500 hover:text-red-500 hover:bg-zinc-800/30 rounded-lg transition-colors cursor-pointer"
+                              title="Remover Licença"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );

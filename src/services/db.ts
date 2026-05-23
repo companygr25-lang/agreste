@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Client, VisitReport, LargeClientActivity, CompanyDocument, Reminder, UserProfile } from '../types';
+import { Client, VisitReport, LargeClientActivity, CompanyDocument, Reminder, UserProfile, SystemUserDetail } from '../types';
 import { isSupabaseConfigured, getSupabase } from './supabase';
 
 // Seed Initial Data
@@ -136,22 +136,112 @@ export class AGRESTE_DB {
   // --- Auth & Users ---
   static getUsers(): Record<string, string> {
     return this.get<Record<string, string>>('users', { 
-      'adriano senna': 'agreste2026',
-      'admin': 'admin2026'
+      'gil silva': 'admin123'
     });
+  }
+
+  static getUserDetails(): Record<string, SystemUserDetail> {
+    const defaultDetails: Record<string, SystemUserDetail> = {
+      'gil silva': {
+        username: 'gil silva',
+        name: 'Gil Silva',
+        status: 'approved',
+        paymentStatus: 'pago',
+        paymentValue: 0,
+        allowedTabs: ['dashboard', 'usuarios', 'configuracoes']
+      }
+    };
+    return this.get<Record<string, SystemUserDetail>>('user_details', defaultDetails);
+  }
+
+  static saveUserDetails(details: Record<string, SystemUserDetail>): void {
+    this.set('user_details', details);
+  }
+
+  static getLicensesLimit(): number {
+    return this.get<number>('licenses_limit', 5);
+  }
+
+  static setLicensesLimit(limit: number): void {
+    this.set('licenses_limit', limit);
   }
 
   static registerUser(username: string, pass: string): boolean {
     const users = this.getUsers();
-    if (users[username.toLowerCase()]) return false;
-    users[username.toLowerCase()] = pass;
+    const normalized = username.toLowerCase().trim();
+    if (users[normalized]) return false;
+    users[normalized] = pass;
     this.set('users', users);
+
+    // Save initial details
+    const details = this.getUserDetails();
+    details[normalized] = {
+      username: normalized,
+      name: username,
+      status: normalized === 'gil silva' ? 'approved' : 'pending',
+      paymentStatus: 'pendente',
+      paymentValue: 150,
+      allowedTabs: ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'perfil', 'configuracoes']
+    };
+    this.saveUserDetails(details);
     return true;
   }
 
-  static validateUser(username: string, pass: string): boolean {
+  static validateUser(username: string, pass: string): { valid: boolean; status?: 'pending' | 'approved' | 'blocked'; message?: string } {
+    const normalized = username.toLowerCase().trim();
+    
+    // Self-healing bypass to ensure Gil Silva can always log in with the correct credentials
+    if (normalized === 'gil silva' && pass === 'admin123') {
+      const details = this.getUserDetails();
+      details[normalized] = {
+        username: normalized,
+        name: 'Gil Silva',
+        status: 'approved',
+        paymentStatus: 'pago',
+        paymentValue: 0,
+        allowedTabs: ['dashboard', 'usuarios', 'configuracoes']
+      };
+      this.saveUserDetails(details);
+
+      const users = this.getUsers();
+      users[normalized] = 'admin123';
+      this.set('users', users);
+
+      return { valid: true };
+    }
+
     const users = this.getUsers();
-    return users[username.toLowerCase()] === pass;
+    
+    if (users[normalized] !== pass) {
+      return { valid: false, message: 'Credenciais incorretas.' };
+    }
+    
+    const details = this.getUserDetails();
+    let detail = details[normalized];
+    
+    // Auto-create detail if user registered earlier but detail doesn't exist
+    if (!detail) {
+      details[normalized] = {
+        username: normalized,
+        name: username,
+        status: normalized === 'gil silva' ? 'approved' : 'pending',
+        paymentStatus: 'pendente',
+        paymentValue: 150,
+        allowedTabs: ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'perfil', 'configuracoes']
+      };
+      this.saveUserDetails(details);
+      detail = details[normalized];
+    }
+    
+    if (detail.status === 'pending') {
+      return { valid: false, status: 'pending', message: 'Acesso pendente de liberação. Favor aguardar a liberação do administrador.' };
+    }
+    
+    if (detail.status === 'blocked') {
+      return { valid: false, status: 'blocked', message: 'Acesso bloqueado pelo provedor.' };
+    }
+    
+    return { valid: true };
   }
 
   // --- Clients CRUD ---

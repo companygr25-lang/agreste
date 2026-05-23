@@ -16,6 +16,7 @@ import ReportsTab from './components/ReportsTab';
 import DocumentsTab from './components/DocumentsTab';
 import ProfileTab from './components/ProfileTab';
 import SettingsTab from './components/SettingsTab';
+import UsersTab from './components/UsersTab';
 import Toast from './components/Toast';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -143,6 +144,10 @@ export default function App() {
     );
   }
 
+  const userDetails = AGRESTE_DB.getUserDetails();
+  const currentDetails = currentUser ? userDetails[currentUser.toLowerCase()] : null;
+  const canEditState = currentDetails ? currentDetails.canEditData !== false : true;
+
   return (
     <div className={theme === 'dark' ? 'dark text-zinc-100 bg-[#0F0F0F]' : 'text-zinc-900 bg-zinc-50'}>
       <div className="min-h-screen flex flex-col lg:flex-row" id="app-structure">
@@ -158,6 +163,7 @@ export default function App() {
           profile={profile || { id: '', username: '', name: 'Operador', phone: '', photoUrl: '' }}
           clients={clients}
           documents={documents}
+          currentUser={currentUser}
         />
 
         {/* Core Screen Container */}
@@ -180,6 +186,15 @@ export default function App() {
                   setActiveTab={setActiveTab}
                   showToast={showToast}
                   onRefreshData={refreshAllData}
+                  currentUser={currentUser}
+                />
+              )}
+
+              {activeTab === 'usuarios' && (
+                <UsersTab
+                  theme={theme}
+                  showToast={showToast}
+                  onRefreshData={refreshAllData}
                 />
               )}
 
@@ -189,6 +204,7 @@ export default function App() {
                   clients={clients}
                   showToast={showToast}
                   onRefreshData={refreshAllData}
+                  canEdit={canEditState}
                 />
               )}
 
@@ -199,6 +215,7 @@ export default function App() {
                   clients={clients}
                   showToast={showToast}
                   onRefreshData={refreshAllData}
+                  canEdit={canEditState}
                 />
               )}
 
@@ -208,6 +225,7 @@ export default function App() {
                   reports={reports}
                   showToast={showToast}
                   onRefreshData={refreshAllData}
+                  canEdit={canEditState}
                 />
               )}
 
@@ -217,6 +235,7 @@ export default function App() {
                   documents={documents}
                   showToast={showToast}
                   onRefreshData={refreshAllData}
+                  canEdit={canEditState}
                 />
               )}
 
@@ -236,6 +255,7 @@ export default function App() {
                   reminders={reminders}
                   showToast={showToast}
                   onRefreshData={refreshAllData}
+                  currentUser={currentUser}
                 />
               )}
             </motion.div>

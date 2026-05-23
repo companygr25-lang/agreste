@@ -18,10 +18,11 @@ interface CalendarTabProps {
   clients: Client[];
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   onRefreshData: () => void;
+  canEdit?: boolean;
 }
 
 export default function CalendarTab({ 
-  theme, calendarEvents, clients, showToast, onRefreshData 
+  theme, calendarEvents, clients, showToast, onRefreshData, canEdit = true 
 }: CalendarTabProps) {
   const [showEventModal, setShowEventModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<LargeClientActivity | null>(null);
@@ -153,13 +154,15 @@ export default function CalendarTab({
             Clientes VIP com regime operacional diferenciado que requerem acompanhamento e inspeções técnicas semanais fixas.
           </p>
         </div>
-        <button
-          onClick={handleOpenNewEvent}
-          id="add-large-client-btn"
-          className="flex items-center gap-2 bg-[#D35400] hover:bg-[#FC6B0A] text-white font-semibold text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-[#D35400]/10 cursor-pointer hover:scale-[1.01] transition-transform duration-100 animate-pulse"
-        >
-          <PlusCircle className="w-4 h-4" /> Configurar Visita Fixo
-        </button>
+        {canEdit && (
+          <button
+            onClick={handleOpenNewEvent}
+            id="add-large-client-btn"
+            className="flex items-center gap-2 bg-[#D35400] hover:bg-[#FC6B0A] text-white font-semibold text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-[#D35400]/10 cursor-pointer hover:scale-[1.01] transition-transform duration-100 animate-pulse"
+          >
+            <PlusCircle className="w-4 h-4" /> Configurar Visita Fixo
+          </button>
+        )}
       </div>
 
       {/* Grid of Scheduled Events */}
@@ -196,24 +199,26 @@ export default function CalendarTab({
                         {event.clientName}
                       </h3>
                     </div>
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => handleOpenEditEvent(event)}
-                        id={`edit-cal-${event.id}`}
-                        className="text-zinc-500 hover:text-orange-500 p-1.5 hover:bg-zinc-850 rounded-lg transition-colors cursor-pointer"
-                        title="Editar Evento"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteEvent(event.id, event.clientName)}
-                        id={`delete-cal-${event.id}`}
-                        className="text-zinc-500 hover:text-red-500 p-1.5 hover:bg-zinc-850 rounded-lg transition-colors cursor-pointer"
-                        title="Remover Evento"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {canEdit && (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleOpenEditEvent(event)}
+                          id={`edit-cal-${event.id}`}
+                          className="text-zinc-500 hover:text-orange-500 p-1.5 hover:bg-zinc-850 rounded-lg transition-colors cursor-pointer"
+                          title="Editar Evento"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEvent(event.id, event.clientName)}
+                          id={`delete-cal-${event.id}`}
+                          className="text-zinc-500 hover:text-red-500 p-1.5 hover:bg-zinc-850 rounded-lg transition-colors cursor-pointer"
+                          title="Remover Evento"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Scheduled Weekday and Details */}
