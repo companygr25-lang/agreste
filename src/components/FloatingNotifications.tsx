@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Sparkles, MessageSquare, AlertCircle, Check, Users } from 'lucide-react';
 import { AGRESTE_DB } from '../services/db';
@@ -25,6 +25,14 @@ export default function FloatingNotifications({
     }
   });
 
+  const playedNotifsRef = useRef<Set<string>>(new Set());
+
+  // Populate initially known notification IDs on mount
+  useEffect(() => {
+    const initialNotifs = AGRESTE_DB.getNotifications();
+    initialNotifs.forEach(n => playedNotifsRef.current.add(n.id));
+  }, []);
+
   // Sync with real-time database updates
   useEffect(() => {
     const handleSync = () => {
@@ -32,6 +40,47 @@ export default function FloatingNotifications({
     };
     return AGRESTE_DB.subscribeToRealtime(handleSync);
   }, []);
+
+  // Watch for new incoming relevant notifications and play notification sound
+  useEffect(() => {
+    const lowerUser = currentUser.toLowerCase().trim();
+    let shouldPlay = false;
+
+    notifications.forEach(notif => {
+      // If we already saw/processed this one, skip
+      if (playedNotifsRef.current.has(notif.id)) return;
+
+      // Mark as seen so we don't play/assess it again
+      playedNotifsRef.current.add(notif.id);
+
+      // Check if it is currently active is not dismissed locally/globally
+      if (localDismissed.includes(notif.id)) return;
+      if (notif.status === 'dismissed') return;
+
+      let isRelevant = false;
+      if (notif.type === 'chat_request') {
+        isRelevant = notif.targetTech?.toLowerCase().trim() === lowerUser;
+      } else if (notif.type === 'new_registration') {
+        isRelevant = true;
+      }
+
+      if (isRelevant) {
+        shouldPlay = true;
+      }
+    });
+
+    if (shouldPlay) {
+      try {
+        const audio = new Audio('https://www.image2url.com/r2/default/audio/1779643438140-5768f505-6746-43a6-bc97-5162d73af79a.mp3');
+        audio.play().catch(e => {
+          // Normal browser autoplay block, handled gracefully
+          console.warn('Notification audio autoplay prevented or failed:', e);
+        });
+      } catch (err) {
+        console.error('Failed to play notification audio:', err);
+      }
+    }
+  }, [notifications, currentUser, localDismissed]);
 
   const dismissLocally = (id: string) => {
     const updated = [...localDismissed, id];
