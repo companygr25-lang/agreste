@@ -31,6 +31,7 @@ export interface Client {
   name: string; // Favorecido
   city: string;
   responsible: string;
+  phone?: string;
   paymentStatus: PaymentStatus;
   size: 'grande' | 'pequeno';
   createdAt: string;
@@ -90,4 +91,28 @@ export interface AppState {
   theme: 'light' | 'dark';
   currentTab: string;
   toast: { message: string; type: 'success' | 'error' | 'info' } | null;
+}
+
+export interface ChatMessage {
+  id: string;
+  sender: 'bot' | 'client' | 'technician';
+  senderName: string;
+  text: string;
+  timestamp: string;
+  isSystem?: boolean;
+}
+
+export interface ChatSession {
+  id: string; // client reference or random
+  clientUsername: string; // matches account in client environment or "guest-..."
+  clientName: string;
+  clientPhone: string;
+  clientCity: string;
+  responsibleName: string;
+  isNewClient: boolean;
+  assignedTech?: string; // technician username
+  status: 'bot' | 'tech_requested' | 'active_with_tech';
+  messages: ChatMessage[];
+  lastUpdated: string;
+  unreadCount?: number;
 }

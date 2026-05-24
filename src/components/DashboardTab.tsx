@@ -750,7 +750,7 @@ export default function DashboardTab({
                         {client.name}
                       </p>
                       <p className="text-[9px] text-zinc-500 font-mono mt-0.5 mt-0">
-                        {client.city} • Responsável: {client.responsible}
+                        {client.city} • Responsável: {client.responsible} {client.phone ? `(${client.phone})` : ''}
                       </p>
                     </div>
                     <button

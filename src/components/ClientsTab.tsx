@@ -8,7 +8,7 @@ import { Client, PestStatus, VisitReport, PaymentStatus } from '../types';
 import { AGRESTE_DB } from '../services/db';
 import { 
   Users, MapPin, User, PlusCircle, CheckCircle, X, Search, 
-  Trash2, Edit, ClipboardList, AlertTriangle, AlertCircle, Sparkles
+  Trash2, Edit, ClipboardList, AlertTriangle, AlertCircle, Sparkles, Phone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -37,6 +37,7 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
   const [editName, setEditName] = useState('');
   const [editCity, setEditCity] = useState('');
   const [editResponsible, setEditResponsible] = useState('');
+  const [editPhone, setEditPhone] = useState('');
   const [editSize, setEditSize] = useState<'grande' | 'pequeno'>('grande');
   const [editPaymentStatus, setEditPaymentStatus] = useState<PaymentStatus>('pago');
   const [showEditConfirm, setShowEditConfirm] = useState<{ original: Client; updated: Client } | null>(null);
@@ -45,6 +46,7 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
   const [clientName, setClientName] = useState('');
   const [clientCity, setClientCity] = useState('');
   const [clientResponsible, setClientResponsible] = useState('');
+  const [clientPhone, setClientPhone] = useState('');
   const [clientPaymentStatus, setClientPaymentStatus] = useState<PaymentStatus>('pago');
   const [clientSize, setClientSize] = useState<'grande' | 'pequeno'>('grande');
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
@@ -85,6 +87,7 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
       name: clientName,
       city: clientCity,
       responsible: clientResponsible,
+      phone: clientPhone,
       paymentStatus: clientPaymentStatus,
       size: clientSize,
     });
@@ -95,6 +98,7 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
     setClientName('');
     setClientCity('');
     setClientResponsible('');
+    setClientPhone('');
     setClientPaymentStatus('pago');
     setClientSize('grande');
     setShowAddModal(false);
@@ -121,6 +125,7 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
     setEditName(client.name);
     setEditCity(client.city);
     setEditResponsible(client.responsible);
+    setEditPhone(client.phone || '');
     setEditSize(client.size);
     setEditPaymentStatus(client.paymentStatus);
   };
@@ -138,6 +143,7 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
       name: editName,
       city: editCity,
       responsible: editResponsible,
+      phone: editPhone,
       size: editSize,
       paymentStatus: editPaymentStatus,
     };
@@ -405,8 +411,14 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
                   </h4>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-400 mt-1">
                     <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-[#D35400]" /> {client.city}</span>
-                    <span className="text-zinc-600">•</span>
+                    <span className="text-zinc-650">•</span>
                     <span className="flex items-center gap-1"><User className="w-3.5 h-3.5 text-[#D35400]" /> Resp: {client.responsible}</span>
+                    {client.phone && (
+                      <>
+                        <span className="text-zinc-650">•</span>
+                        <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-[#D35400]" /> Contato: {client.phone}</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -558,6 +570,24 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
                       }`}
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-2 text-zinc-400">
+                    Telefone de Contato (WhatsApp)
+                  </label>
+                  <input
+                    type="text"
+                    value={clientPhone}
+                    onChange={(e) => setClientPhone(e.target.value)}
+                    placeholder="Ex: (81) 99876-5432"
+                    id="new-client-phone"
+                    className={`w-full py-2.5 px-4 rounded-xl border text-sm outline-none transition-all ${
+                      theme === 'dark'
+                        ? 'bg-zinc-950 border-[#242424] text-white focus:border-[#D35400]'
+                        : 'bg-zinc-100 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                    }`}
+                  />
                 </div>
 
                 <div>
@@ -1099,6 +1129,24 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
                       }`}
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-2 text-zinc-400">
+                    Telefone de Contato (WhatsApp)
+                  </label>
+                  <input
+                    type="text"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    placeholder="Ex: (81) 99876-5432"
+                    id="edit-client-phone"
+                    className={`w-full py-2.5 px-4 rounded-xl border text-sm outline-none transition-all ${
+                      theme === 'dark'
+                        ? 'bg-zinc-950 border-[#242424] text-white focus:border-[#D35400]'
+                        : 'bg-zinc-100 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                    }`}
+                  />
                 </div>
 
                 <div>

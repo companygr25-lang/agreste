@@ -18,10 +18,19 @@ import ProfileTab from './components/ProfileTab';
 import SettingsTab from './components/SettingsTab';
 import UsersTab from './components/UsersTab';
 import Toast from './components/Toast';
+import AgresteChat from './components/AgresteChat';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [currentClient, setCurrentClient] = useState<{
+    id: string;
+    name: string;
+    responsible: string;
+    phone: string;
+    city: string;
+    isNew: boolean;
+  } | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -54,6 +63,15 @@ export default function App() {
     const savedUser = localStorage.getItem('agreste_logged_user');
     if (savedUser) {
       setCurrentUser(savedUser);
+    }
+
+    const savedClient = localStorage.getItem('agreste_logged_client');
+    if (savedClient) {
+      try {
+        setCurrentClient(JSON.parse(savedClient));
+      } catch {
+        localStorage.removeItem('agreste_logged_client');
+      }
     }
 
     // 4. Dynamic Favicon setter (overriding in-browser favicon dynamically to fulfill user requirement)
@@ -109,7 +127,9 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('agreste_logged_user');
+    localStorage.removeItem('agreste_logged_client');
     setCurrentUser(null);
+    setCurrentClient(null);
     showToast('Logout efetuado com sucesso.', 'info');
   };
 
@@ -123,14 +143,46 @@ export default function App() {
     AGRESTE_DB.setTheme(newTheme);
   };
 
-  if (!currentUser) {
+  if (!currentUser && !currentClient) {
     return (
-      <main className={theme === 'dark' ? 'dark' : ''} id="app-main-auth">
+      <main className={theme === 'dark' ? 'dark text-zinc-100 bg-[#0F0F0F]' : 'text-zinc-900 bg-zinc-50'} id="app-main-auth">
         <LoginScreen 
           onLoginSuccess={handleLoginSuccess} 
+          onClientLoginSuccess={(client) => {
+            setCurrentClient(client);
+            refreshAllData();
+          }}
           showToast={showToast} 
           theme={theme} 
         />
+        <AnimatePresence>
+          {toast && (
+            <Toast 
+              message={toast.message} 
+              type={toast.type} 
+              onClose={() => setToast(null)} 
+            />
+          )}
+        </AnimatePresence>
+      </main>
+    );
+  }
+
+  if (currentClient) {
+    return (
+      <main className={theme === 'dark' ? 'dark text-zinc-100 bg-[#0F0F0F] min-h-screen p-4 sm:p-6 lg:p-8 flex items-center justify-center' : 'text-zinc-900 bg-zinc-50 min-h-screen p-4 sm:p-6 lg:p-8 flex items-center justify-center'} id="app-viewport-client">
+        <div className="max-w-4xl mx-auto w-full">
+          <AgresteChat 
+            theme={theme}
+            showToast={showToast}
+            currentClient={currentClient}
+            onLogoutClient={() => {
+              localStorage.removeItem('agreste_logged_client');
+              setCurrentClient(null);
+              showToast('Sessão de suporte encerrada.', 'info');
+            }}
+          />
+        </div>
         <AnimatePresence>
           {toast && (
             <Toast 
@@ -255,6 +307,14 @@ export default function App() {
                   reminders={reminders}
                   showToast={showToast}
                   onRefreshData={refreshAllData}
+                  currentUser={currentUser}
+                />
+              )}
+
+              {activeTab === 'agreste-chat' && (
+                <AgresteChat
+                  theme={theme}
+                  showToast={showToast}
                   currentUser={currentUser}
                 />
               )}

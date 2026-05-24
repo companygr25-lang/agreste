@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Client, VisitReport, LargeClientActivity, CompanyDocument, Reminder, UserProfile, SystemUserDetail } from '../types';
+import { Client, VisitReport, LargeClientActivity, CompanyDocument, Reminder, UserProfile, SystemUserDetail, ChatSession } from '../types';
 import { isSupabaseConfigured, getSupabase } from './supabase';
 
 // Seed Initial Data
@@ -122,6 +122,7 @@ export class AGRESTE_DB {
   private static set<T>(key: string, value: T): void {
     localStorage.setItem(`agreste_${key}`, JSON.stringify(value));
     this.pushToSupabase(key, value);
+    this.notifyListeners();
   }
 
   // --- Theme ---
@@ -416,6 +417,25 @@ export class AGRESTE_DB {
     this.set('calendar', []);
     this.set('documents', []);
     this.set('reminders', []);
+    this.set('chats', []);
+    this.set('client_chat_accounts', {});
+  }
+
+  // --- Chat Bot and Client Accounts Helpers ---
+  static getClientChatAccounts(): Record<string, { password?: string; phone: string; name?: string; responsible?: string; city?: string; isRegistered: boolean }> {
+    return this.get<Record<string, { password?: string; phone: string; name?: string; responsible?: string; city?: string; isRegistered: boolean }>>('client_chat_accounts', {});
+  }
+
+  static saveClientChatAccounts(accounts: Record<string, { password?: string; phone: string; name?: string; responsible?: string; city?: string; isRegistered: boolean }>): void {
+    this.set('client_chat_accounts', accounts);
+  }
+
+  static getChats(): ChatSession[] {
+    return this.get<ChatSession[]>('chats', []);
+  }
+
+  static saveChats(chats: ChatSession[]): void {
+    this.set('chats', chats);
   }
 
   // --- Database Sync Check for Supabase migration compatibility ---

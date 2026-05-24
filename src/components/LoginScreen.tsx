@@ -5,24 +5,54 @@
 
 import React, { useState } from 'react';
 import { AGRESTE_DB } from '../services/db';
-import { ShieldCheck, UserPlus, LogIn, Lock, User as UserIcon } from 'lucide-react';
-import { motion } from 'motion/react';
+import { 
+  ShieldCheck, UserPlus, LogIn, Lock, User as UserIcon, 
+  MessageSquare, Sparkles, Building, Phone, MapPin, ArrowRight
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface LoginScreenProps {
   onLoginSuccess: (username: string) => void;
+  onClientLoginSuccess: (client: { id: string; name: string; responsible: string; phone: string; city: string; isNew: boolean }) => void;
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   theme: 'light' | 'dark';
 }
 
-export default function LoginScreen({ onLoginSuccess, showToast, theme }: LoginScreenProps) {
+export default function LoginScreen({ 
+  onLoginSuccess, onClientLoginSuccess, showToast, theme 
+}: LoginScreenProps) {
+  // Toggle between Tech Login and Client Chat portal
+  const [activeSegment, setActiveSegment] = useState<'tech' | 'client'>('tech');
+
+  // --- TECHNICIAN STATES ---
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  // --- CLIENT STATES ---
+  // Subview inside CLIENT: 'login' | 'register' | 'completing_profile'
+  const [clientSubState, setClientSubState] = useState<'login' | 'register' | 'completing_profile'>('login');
+  
+  // Client Fast Login inputs (Established Client)
+  const [responsibleInput, setResponsibleInput] = useState('');
+  const [phoneInput, setPhoneInput] = useState('');
+
+  // Client Signup inputs
+  const [clientUsername, setClientUsername] = useState('');
+  const [clientPassword, setClientPassword] = useState('');
+  const [clientPhone, setClientPhone] = useState('');
+
+  // Client Profile Completion form fields
+  const [companyName, setCompanyName] = useState('');
+  const [companyResponsible, setCompanyResponsible] = useState('');
+  const [companyCity, setCompanyCity] = useState('');
+  const [companyPhone, setCompanyPhone] = useState('');
+
   const logoUrl = 'https://i.postimg.cc/W3fG6xMt/Whats-App-Image-2026-05-21-at-16-33-40.jpg';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Tech Login form submit
+  const handleTechSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!username.trim() || !password.trim()) {
@@ -42,27 +72,138 @@ export default function LoginScreen({ onLoginSuccess, showToast, theme }: LoginS
 
       const success = AGRESTE_DB.registerUser(username, password);
       if (success) {
-        showToast('Usuário cadastrado com sucesso! Faça login.', 'success');
+        showToast('Cadastro realizado com sucesso! Aguarde liberação do administrador.', 'success');
         setIsRegister(false);
         setPassword('');
         setConfirmPassword('');
       } else {
-        showToast('Este usuário já existe.', 'error');
+        showToast('Este usuário de operador já existe.', 'error');
       }
     } else {
       const authResult = AGRESTE_DB.validateUser(username, password);
       if (authResult.valid) {
-        showToast(`Bem-vindo, ${username}!`, 'success');
+        showToast(`Bem-vindo ao Painel Técnico, ${username}!`, 'success');
         onLoginSuccess(username);
       } else {
-        showToast(authResult.message || 'Credenciais incorretas.', 'error');
+        showToast(authResult.message || 'Credenciais de operador incorretas.', 'error');
       }
     }
   };
 
+  // Client portal form submit (Existing Client)
+  const handleClientLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!responsibleInput.trim() || !phoneInput.trim()) {
+      showToast('Preencha seu nome e contato para acesso.', 'error');
+      return;
+    }
+
+    // Match against our established clients database
+    const clients = AGRESTE_DB.getClients();
+    const cleanResponsibleInput = responsibleInput.toLowerCase().trim();
+    
+    const foundClient = clients.find(c => 
+      c.responsible.toLowerCase().trim() === cleanResponsibleInput
+    );
+
+    if (foundClient) {
+      // Recognized as established client!
+      const loggedInfo = {
+        id: foundClient.id,
+        name: foundClient.name,
+        responsible: foundClient.responsible,
+        phone: phoneInput.trim(),
+        city: foundClient.city,
+        isNew: false
+      };
+      
+      localStorage.setItem('agreste_logged_client', JSON.stringify(loggedInfo));
+      onClientLoginSuccess(loggedInfo);
+      showToast(`Bem-vindo de volta, ${foundClient.responsible}! Portal de atendimento aberto.`, 'success');
+    } else {
+      showToast('Identificação de cliente não encontrada em nossa base. Se for um cliente novo, crie uma conta gratuita!', 'error');
+    }
+  };
+
+  // Client Register submit (creates user, telephone, then pushes to Profile form)
+  const handleClientRegisterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!clientUsername.trim() || !clientPassword.trim() || !clientPhone.trim()) {
+      showToast('Preencha todas as credenciais básicas.', 'error');
+      return;
+    }
+
+    if (clientPassword.length < 4) {
+      showToast('A senha precisa conter ao menos 4 caracteres.', 'error');
+      return;
+    }
+
+    const accounts = AGRESTE_DB.getClientChatAccounts();
+    const cleanUsr = clientUsername.toLowerCase().trim();
+
+    if (accounts[cleanUsr]) {
+      showToast('Este nome de usuário de atendimento já está em uso.', 'error');
+      return;
+    }
+
+    // Move to Step 2: Information form asking for Company, Responsible, City, Phone
+    setCompanyPhone(clientPhone);
+    setCompanyResponsible(clientUsername);
+    setClientSubState('completing_profile');
+    showToast('Acesso básico criado! Preencha a ficha de cadastro para abrir o chat.', 'info');
+  };
+
+  // Client Profile completeness submit (concludes signup & logs in)
+  const handleClientProfileCompleteSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!companyName.trim() || !companyResponsible.trim() || !companyCity.trim() || !companyPhone.trim()) {
+      showToast('Preencha todos os dados da sua empresa ou residência.', 'error');
+      return;
+    }
+
+    // 1. Add them as an official active client in clients database!
+    const newClient = AGRESTE_DB.addClient({
+      name: companyName.trim(),
+      responsible: companyResponsible.trim(),
+      city: companyCity.trim(),
+      paymentStatus: 'pendente', // default pending payment
+      size: 'pequeno' // default size
+    });
+
+    // 2. Persist their chat access credentials with linked profiling data
+    const accounts = AGRESTE_DB.getClientChatAccounts();
+    const cleanUsr = clientUsername.toLowerCase().trim();
+    accounts[cleanUsr] = {
+      password: clientPassword,
+      phone: companyPhone.trim(),
+      name: companyName.trim(),
+      responsible: companyResponsible.trim(),
+      city: companyCity.trim(),
+      isRegistered: true
+    };
+    AGRESTE_DB.saveClientChatAccounts(accounts);
+
+    // 3. Log them in automatically!
+    const loggedInfo = {
+      id: newClient.id,
+      name: companyName.trim(),
+      responsible: companyResponsible.trim(),
+      phone: companyPhone.trim(),
+      city: companyCity.trim(),
+      isNew: true
+    };
+
+    localStorage.setItem('agreste_logged_client', JSON.stringify(loggedInfo));
+    onClientLoginSuccess(loggedInfo);
+    showToast(`Parceria Iniciada! Chat de suporte aberto para ${companyName}.`, 'success');
+  };
+
   return (
     <div
-      className={`min-h-screen flex items-center justify-center transition-colors duration-300 p-6 ${
+      className={`min-h-screen flex items-center justify-center transition-colors duration-300 p-4 sm:p-6 ${
         theme === 'dark' ? 'bg-[#0F0F0F] text-white' : 'bg-zinc-50 text-zinc-900'
       }`}
       style={{
@@ -74,140 +215,479 @@ export default function LoginScreen({ onLoginSuccess, showToast, theme }: LoginS
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`w-full max-w-md rounded-2xl border p-8 shadow-2xl transition-all duration-300 ${
+        className={`w-full max-w-md rounded-2xl border p-6 sm:p-8 shadow-2xl transition-all duration-300 ${
           theme === 'dark' 
             ? 'bg-[#1A1A1A] border-[#242424] backdrop-blur-md'
             : 'bg-white border-zinc-200 shadow-zinc-200/50'
         }`}
       >
-        <div className="flex flex-col items-center text-center mb-8">
+        <div className="flex flex-col items-center text-center mb-6">
           {/* Logo element with custom direct URL decoration */}
-          <div className="relative group mb-4">
+          <div className="relative group mb-3">
             <div className="absolute -inset-1 rounded-full bg-[#D35400] blur opacity-40 group-hover:opacity-75 transition duration-500"></div>
             <img
               referrerPolicy="no-referrer"
               src={logoUrl}
               alt="AGRESTE Logo"
-              className="relative w-24 h-24 rounded-full object-cover border-2 border-[#D35400] shadow-xl"
+              className="relative w-20 h-20 rounded-full object-cover border-2 border-[#D35400] shadow-xl"
             />
           </div>
 
-          <h1 className="text-4xl font-bold font-display tracking-tight text-[#D35400]">
+          <h1 className="text-3xl font-black font-display tracking-tight text-[#D35400] leading-none">
             AGRESTE
           </h1>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] mt-1 text-zinc-500 font-mono">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] mt-1.5 text-zinc-500 font-mono">
             saúde ambiental
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4" id="login-form">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider mb-2 text-zinc-400">
-              Usuário / Operador
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                <UserIcon className="w-5 h-5" />
-              </span>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Insira o nome de usuário"
-                id="username-input"
-                className={`w-full py-3 pl-10 pr-4 rounded-xl border text-sm outline-none transition-all ${
-                  theme === 'dark'
-                    ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400] focus:ring-1 focus:ring-[#D35400]'
-                    : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400] focus:ring-1 focus:ring-[#D35400]'
-                }`}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider mb-2 text-zinc-400">
-              Senha de Acesso
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                <Lock className="w-5 h-5" />
-              </span>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                id="password-input"
-                className={`w-full py-3 pl-10 pr-4 rounded-xl border text-sm outline-none transition-all ${
-                  theme === 'dark'
-                    ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400] focus:ring-1 focus:ring-[#D35400]'
-                    : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400] focus:ring-1 focus:ring-[#D35400]'
-                }`}
-              />
-            </div>
-          </div>
-
-          {isRegister && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="space-y-1"
+        {/* --- PORTAL NAVIGATION SEGMENTED TABS --- */}
+        {clientSubState !== 'completing_profile' && (
+          <div className="grid grid-cols-2 gap-1 p-1 bg-zinc-950/20 border border-zinc-800/20 rounded-xl mb-6">
+            <button
+              type="button"
+              onClick={() => setActiveSegment('tech')}
+              className={`py-2 text-[11px] font-bold uppercase rounded-lg transition-all cursor-pointer ${
+                activeSegment === 'tech'
+                  ? 'bg-[#D35400] text-white shadow-md'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
             >
-              <label className="block text-xs font-semibold uppercase tracking-wider mb-2 text-zinc-400">
-                Confirmar Senha
+              💼 Área Técnica
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSegment('client')}
+              className={`py-2 text-[11px] font-bold uppercase rounded-lg transition-all cursor-pointer ${
+                activeSegment === 'client'
+                  ? 'bg-[#D35400] text-white shadow-md'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              💬 Área do Cliente
+            </button>
+          </div>
+        )}
+
+        {/* ─── TECHNICAL / OPERATOR WORKSPACE LOGIN ─── */}
+        {activeSegment === 'tech' && (
+          <form onSubmit={handleTechSubmit} className="space-y-4" id="login-form">
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
+                Usuário / Operador
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                  <ShieldCheck className="w-5 h-5" />
+                  <UserIcon className="w-4 h-4" />
                 </span>
                 <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  id="confirm-password-input"
-                  className={`w-full py-3 pl-10 pr-4 rounded-xl border text-sm outline-none transition-all ${
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Seu nome cadastrado"
+                  id="username-input"
+                  className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
                     theme === 'dark'
-                      ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400] focus:ring-1 focus:ring-[#D35400]'
-                      : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400] focus:ring-1 focus:ring-[#D35400]'
+                      ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                      : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
                   }`}
                 />
               </div>
-            </motion.div>
-          )}
+            </div>
 
-          <button
-            type="submit"
-            id="login-submit-btn"
-            className="w-full py-3 bg-[#D35400] hover:bg-[#FC6B0A] text-white text-sm font-semibold rounded-xl shadow-lg shadow-[#D35400]/10 hover:shadow-[#D35400]/25 flex items-center justify-center gap-2 cursor-pointer transition-transform duration-100 active:scale-[0.98]"
-          >
-            {isRegister ? (
-              <>
-                <UserPlus className="w-4 h-4" /> Cadastrar Acesso
-              </>
-            ) : (
-              <>
-                <LogIn className="w-4 h-4" /> Entrar no Painel
-              </>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
+                Senha de Acesso
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                  <Lock className="w-4 h-4" />
+                </span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  id="password-input"
+                  className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
+                    theme === 'dark'
+                      ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                      : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                  }`}
+                />
+              </div>
+            </div>
+
+            {isRegister && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="space-y-1"
+              >
+                <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
+                  Confirmar Senha
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                    <ShieldCheck className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    id="confirm-password-input"
+                    className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
+                      theme === 'dark'
+                        ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                        : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                    }`}
+                  />
+                </div>
+              </motion.div>
             )}
-          </button>
-        </form>
 
-        <div className="mt-6 pt-6 border-t border-zinc-800/10 text-center">
-          <button
-            onClick={() => {
-              setIsRegister(!isRegister);
-              setPassword('');
-              setConfirmPassword('');
-            }}
-            id="toggle-register-btn"
-            className="text-xs text-[#D35400] hover:text-[#FC6B0A] hover:underline cursor-pointer"
-          >
-            {isRegister
-              ? 'Já possui uma conta? Entrar agora'
-              : 'Não possui credenciais? Cadastrar operador'}
-          </button>
-        </div>
+            <button
+              type="submit"
+              id="login-submit-btn"
+              className="w-full py-2.5 bg-[#D35400] hover:bg-[#FC6B0A] text-white text-xs font-bold uppercase rounded-xl shadow-lg shadow-[#D35400]/10 flex items-center justify-center gap-2 cursor-pointer transition-colors"
+            >
+              {isRegister ? (
+                <>
+                  <UserPlus className="w-4 h-4" /> Registrar Acesso Técnico
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-4 h-4" /> Entrar no Painel Técnico
+                </>
+              )}
+            </button>
+
+            <div className="pt-4 border-t border-zinc-805/40 dark:border-zinc-900 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegister(!isRegister);
+                  setPassword('');
+                  setConfirmPassword('');
+                }}
+                className="text-xs text-[#D35400] hover:text-[#FC6B0A] hover:underline cursor-pointer"
+              >
+                {isRegister
+                  ? 'Já é operador? Conectar ao Painel'
+                  : 'Trabalha conosco? Solicitar Acesso como Técnico'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* ─── CLIENT CHAT / BOT PORTAL FLOWS ─── */}
+        {activeSegment === 'client' && (
+          <div className="space-y-4">
+
+            {/* A. CLIENT FAST LOGIN (ESTABLISHED) */}
+            {clientSubState === 'login' && (
+              <form onSubmit={handleClientLoginSubmit} className="space-y-4">
+                <div className="text-left bg-orange-500/5 p-3 rounded-xl border border-orange-500/10 mb-2">
+                  <h3 className="text-xs font-bold text-orange-400 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-orange-400 animate-pulse" />
+                    Acesso Rápido de Cliente
+                  </h3>
+                  <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                    Insira o nome do responsável e seu número para abrir o chat. Nosso assistente virtual auto-identifica seu cadastro.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
+                    Nome do Responsável *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                      <UserIcon className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={responsibleInput}
+                      onChange={(e) => setResponsibleInput(e.target.value)}
+                      placeholder="Ex: João da Silva"
+                      className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                          : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
+                    Número de Contato Cadastrado *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                      <Phone className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={phoneInput}
+                      onChange={(e) => setPhoneInput(e.target.value)}
+                      placeholder="Ex: (81) 98765-4321"
+                      className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                          : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-[#D35400] hover:bg-[#FC6B0A] text-white text-xs font-bold uppercase rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-orange-500/10"
+                >
+                  <MessageSquare className="w-4 h-4" /> Iniciar Chat de Atendimento
+                </button>
+
+                <div className="pt-4 border-t border-zinc-900/10 dark:border-zinc-900 text-center">
+                  <button
+                    type="button"
+                    onClick={() => setClientSubState('register')}
+                    className="text-xs text-[#D35400] hover:text-[#FC6B0A] hover:underline cursor-pointer font-bold"
+                  >
+                    Novo por aqui? Criar conta de cliente gratuitamente
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* B. CLIENT FREE SIGNUP STEP 1 */}
+            {clientSubState === 'register' && (
+              <form onSubmit={handleClientRegisterSubmit} className="space-y-4">
+                <div className="text-left bg-[#D35400]/5 p-3 rounded-xl border border-[#D35400]/10 mb-2">
+                  <h3 className="text-xs font-bold text-orange-400">Criar Novo Cadastro Gratuito</h3>
+                  <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                    Comece inserindo uma credencial simples e seu telefone. A seguir, você nos dirá detalhes sobre sua empresa.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
+                    Nome de Usuário de Chat *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                      <UserIcon className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={clientUsername}
+                      onChange={(e) => setClientUsername(e.target.value)}
+                      placeholder="Ex: jonasAtendimento"
+                      className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                          : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
+                    Selecione uma Senha *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-505">
+                      <Lock className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="password"
+                      required
+                      value={clientPassword}
+                      onChange={(e) => setClientPassword(e.target.value)}
+                      placeholder="Ao menos 4 dígitos"
+                      className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                          : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
+                    Número de Contato / Celular *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                      <Phone className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={clientPhone}
+                      onChange={(e) => setClientPhone(e.target.value)}
+                      placeholder="Ex: (81) 99876-5432"
+                      className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                          : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-[#D35400] hover:bg-[#FC6B0A] text-white text-xs font-bold uppercase rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow"
+                >
+                  Continuar Cadastro <ArrowRight className="w-4 h-4" />
+                </button>
+
+                <div className="pt-4 border-t border-zinc-900/10 dark:border-zinc-900 text-center">
+                  <button
+                    type="button"
+                    onClick={() => setClientSubState('login')}
+                    className="text-xs text-zinc-400 hover:text-white hover:underline cursor-pointer"
+                  >
+                    Voltar para Acesso Rápido (Já sou Cliente)
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* C. CLIENT FORM (TELA DE CADASTRO COMPLETO) */}
+            {clientSubState === 'completing_profile' && (
+              <form onSubmit={handleClientProfileCompleteSubmit} className="space-y-4">
+                <div className="text-left bg-[#D35400]/10 p-4 border border-[#D35400]/30 rounded-xl mb-1">
+                  <h3 className="text-sm font-bold text-orange-400 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4" />
+                    Ficha de Cadastro de Novo Cliente
+                  </h3>
+                  <p className="text-[10px] text-zinc-400 mt-1">
+                    Preencha os dados abaixo sobre a sua empresa/residência. Ao concluir, nosso assistente virtual iniciará o chat.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1 text-zinc-400 text-left">
+                    Nome da Empresa / Localidade *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                      <Building className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="Razão social, nome da empresa ou condomínio"
+                      className={`w-full py-2 px-3.5 pl-9 rounded-xl border text-xs outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                          : 'bg-white border-zinc-200 text-zinc-910 focus:border-[#D35400]'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1 text-zinc-400 text-left">
+                    Nome do Responsável *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                      <UserIcon className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={companyResponsible}
+                      onChange={(e) => setCompanyResponsible(e.target.value)}
+                      placeholder="Seu nome para contato"
+                      className={`w-full py-2 px-3.5 pl-9 rounded-xl border text-xs outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                          : 'bg-white border-zinc-200 text-zinc-910 focus:border-[#D35400]'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider mb-1 text-zinc-400 text-left">
+                      Cidade *
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                        <MapPin className="w-3.5 h-3.5" />
+                      </span>
+                      <input
+                        type="text"
+                        required
+                        value={companyCity}
+                        onChange={(e) => setCompanyCity(e.target.value)}
+                        placeholder="Ex: Caruaru"
+                        className={`w-full py-2 px-3 pl-8 rounded-xl border text-xs outline-none transition-all ${
+                          theme === 'dark'
+                            ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                            : 'bg-white border-zinc-200 text-zinc-910 focus:border-[#D35400]'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider mb-1 text-zinc-400 text-left">
+                      Telefone *
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-505">
+                        <Phone className="w-3.5 h-3.5" />
+                      </span>
+                      <input
+                        type="text"
+                        required
+                        value={companyPhone}
+                        onChange={(e) => setCompanyPhone(e.target.value)}
+                        placeholder="Contato de faturamento"
+                        className={`w-full py-2 px-3 pl-8 rounded-xl border text-xs outline-none transition-all ${
+                          theme === 'dark'
+                            ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                            : 'bg-white border-zinc-200 text-zinc-910 focus:border-[#D35400]'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setClientSubState('register')}
+                    className="flex-1 py-2 border border-zinc-800 text-zinc-400 text-xs font-bold uppercase rounded-xl hover:text-white transition-colors cursor-pointer"
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-xl cursor-pointer shadow-md transition-shadow"
+                  >
+                    Abrir Chat Grátis
+                  </button>
+                </div>
+              </form>
+            )}
+
+          </div>
+        )}
       </motion.div>
     </div>
   );

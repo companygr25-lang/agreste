@@ -6,7 +6,7 @@
 import React from 'react';
 import { 
   Building2, Users, Calendar, FileText, FileCheck, 
-  Settings, User, LogOut, Sun, Moon, Sparkles, Clock, Landmark
+  Settings, User, LogOut, Sun, Moon, Sparkles, Clock, Landmark, MessageSquare
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Client, CompanyDocument, UserProfile } from '../types';
@@ -46,7 +46,10 @@ export default function Sidebar({
   // Custom screens from DB
   const userDetails = AGRESTE_DB.getUserDetails();
   const currentDetails = userDetails[normalizedUser];
-  const allowedTabs = currentDetails?.allowedTabs || ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'perfil', 'configuracoes'];
+  const allowedTabs = [
+    ...(currentDetails?.allowedTabs || ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'perfil', 'configuracoes']),
+    'agreste-chat'
+  ];
 
   const allMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <Building2 className="w-4.5 h-4.5" /> },
@@ -73,6 +76,7 @@ export default function Sidebar({
         </span>
       ) : null
     },
+    { id: 'agreste-chat', label: 'Agreste Chat', icon: <MessageSquare className="w-4.5 h-4.5" /> },
     { id: 'perfil', label: 'Meu Perfil', icon: <User className="w-4.5 h-4.5" /> },
     { id: 'configuracoes', label: isProvider ? 'Configuração' : 'Configurações', icon: <Settings className="w-4.5 h-4.5" /> },
   ];
@@ -213,7 +217,7 @@ export default function Sidebar({
         <nav className={`fixed bottom-0 left-0 right-0 z-30 border-t flex justify-around py-2 ${
           theme === 'dark' ? 'bg-[#141414]/95 border-zinc-900 text-white backdrop-blur-md' : 'bg-white border-zinc-200 text-zinc-900'
         }`}>
-          {menuItems.slice(0, 5).map((item) => {
+          {menuItems.slice(0, 6).map((item) => {
             const isActive = activeTab === item.id;
             return (
               <button
@@ -233,8 +237,8 @@ export default function Sidebar({
                     <span className="absolute -top-1 -right-1 text-[8px] leading-none bg-amber-500 text-white w-2 h-2 rounded-full ring-2 ring-zinc-950"></span>
                   )}
                 </div>
-                <span className="text-[9px] mt-1 tracking-tighter truncate max-w-[60px] block">
-                  {item.id === 'dashboard' ? 'Dash' : item.id === 'clientes' ? 'Clientes' : item.id === 'calendario' ? 'Agenda' : item.id === 'relatorios' ? 'Laudos' : 'Docs'}
+                <span className="text-[9px] mt-1 tracking-tighter truncate max-w-[65px] block font-semibold">
+                  {item.id === 'dashboard' ? 'Dash' : item.id === 'clientes' ? 'Clientes' : item.id === 'calendario' ? 'Agenda' : item.id === 'relatorios' ? 'Laudos' : item.id === 'agreste-chat' ? 'Chat' : 'Docs'}
                 </span>
               </button>
             );
