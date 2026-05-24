@@ -99,13 +99,63 @@ export default function LoginScreen({
       return;
     }
 
-    // Match against our established clients database
     const clients = AGRESTE_DB.getClients();
-    const cleanResponsibleInput = responsibleInput.toLowerCase().trim();
-    
-    const foundClient = clients.find(c => 
-      c.responsible.toLowerCase().trim() === cleanResponsibleInput
-    );
+    const accounts = AGRESTE_DB.getClientChatAccounts();
+    const rawInput = responsibleInput.trim();
+    const cleanResponsibleInput = rawInput.toLowerCase();
+    const collapsedInput = cleanResponsibleInput.replace(/\s/g, '');
+    const cleanPhoneInput = phoneInput.replace(/\D/g, ''); // just digits
+
+    // Let's find matches in clients database first (by responsible person, company name, or phone)
+    let foundClient = clients.find(c => {
+      const cResp = c.responsible ? c.responsible.toLowerCase() : '';
+      const cName = c.name ? c.name.toLowerCase() : '';
+      
+      const respMatch = cResp === cleanResponsibleInput || cResp.replace(/\s/g, '') === collapsedInput;
+      const nameMatch = cName === cleanResponsibleInput || cName.replace(/\s/g, '') === collapsedInput;
+      
+      const cPhoneDigits = c.phone ? c.phone.replace(/\D/g, '') : '';
+      const phoneMatch = cPhoneDigits && cleanPhoneInput && (cPhoneDigits.includes(cleanPhoneInput) || cleanPhoneInput.includes(cPhoneDigits));
+      
+      return respMatch || nameMatch || phoneMatch;
+    });
+
+    // If client is still not found in client database, search in chat accounts record (accounts)
+    // to see if we have a match on username, responsible, or phone
+    if (!foundClient) {
+      let matchedAccKey: string | null = null;
+      let matchedAcc: any = null;
+
+      for (const [usrName, acc] of Object.entries(accounts)) {
+        const usrMatch = usrName.toLowerCase().replace(/\s/g, '') === collapsedInput;
+        const accResp = acc.responsible ? acc.responsible.toLowerCase() : '';
+        const accRespMatch = accResp === cleanResponsibleInput || accResp.replace(/\s/g, '') === collapsedInput;
+        const accName = acc.name ? acc.name.toLowerCase() : '';
+        const accNameMatch = accName === cleanResponsibleInput || accName.replace(/\s/g, '') === collapsedInput;
+        const accPhoneDigits = acc.phone ? acc.phone.replace(/\D/g, '') : '';
+        const accPhoneMatch = accPhoneDigits && cleanPhoneInput && (accPhoneDigits.includes(cleanPhoneInput) || cleanPhoneInput.includes(accPhoneDigits));
+
+        if (usrMatch || accRespMatch || accNameMatch || accPhoneMatch) {
+          matchedAccKey = usrName;
+          matchedAcc = acc;
+          break;
+        }
+      }
+
+      if (matchedAcc) {
+        // Self-heal: Create missing Client record from the existing chat credentials
+        foundClient = AGRESTE_DB.addClient({
+          name: matchedAcc.name || 'Empresa Recuperada',
+          responsible: matchedAcc.responsible || matchedAccKey || 'Responsável',
+          city: matchedAcc.city || 'Caruaru',
+          phone: matchedAcc.phone || phoneInput.trim(),
+          paymentStatus: 'pendente',
+          size: 'pequeno',
+          isPendingConfirmation: true
+        });
+        showToast('Cadastro localizado e sincronizado com sucesso!', 'success');
+      }
+    }
 
     if (foundClient) {
       // Recognized as established client!
@@ -113,7 +163,7 @@ export default function LoginScreen({
         id: foundClient.id,
         name: foundClient.name,
         responsible: foundClient.responsible,
-        phone: phoneInput.trim(),
+        phone: phoneInput.trim() || foundClient.phone || '',
         city: foundClient.city,
         isNew: false
       };
@@ -122,7 +172,7 @@ export default function LoginScreen({
       onClientLoginSuccess(loggedInfo);
       showToast(`Bem-vindo de volta, ${foundClient.responsible}! Portal de atendimento aberto.`, 'success');
     } else {
-      showToast('Identificação de cliente não encontrada em nossa base. Se for um cliente novo, crie uma conta gratuita!', 'error');
+      showToast('Cadastro de cliente não localizado na base. Se for um cadastro novo, clique abaixo para fazer seu cadastro gratuito!', 'error');
     }
   };
 
@@ -169,6 +219,7 @@ export default function LoginScreen({
       name: companyName.trim(),
       responsible: companyResponsible.trim(),
       city: companyCity.trim(),
+      phone: companyPhone.trim(),
       paymentStatus: 'pendente', // default pending payment
       size: 'pequeno', // default size
       isPendingConfirmation: true // Highlight on the technician clients screen!
@@ -395,13 +446,13 @@ export default function LoginScreen({
                     Acesso Rápido de Cliente
                   </h3>
                   <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
-                    Insira o nome do responsável e seu número para abrir o chat. Nosso assistente virtual auto-identifica seu cadastro.
+                    Insira sua identificação (Nome, Empresa ou Usuário) e telefone de contato para abrir o chat. Nossa inteligência local localiza e recupera seu cadastro instantaneamente.
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
-                    Nome do Responsável *
+                    Seu Nome, Empresa ou Nome de Usuário *
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
@@ -412,7 +463,7 @@ export default function LoginScreen({
                       required
                       value={responsibleInput}
                       onChange={(e) => setResponsibleInput(e.target.value)}
-                      placeholder="Ex: João da Silva"
+                      placeholder="Ex: Roberto Alves"
                       className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
                         theme === 'dark'
                           ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
