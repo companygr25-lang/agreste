@@ -42,6 +42,21 @@ export default function AgresteChat({
   
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Auto-switch to chat queued from notification system
+  useEffect(() => {
+    if (isClientMode) return;
+    const checkQueuedChat = () => {
+      const saved = localStorage.getItem('agreste_active_chat_id');
+      if (saved) {
+        setActiveSessionId(saved);
+        localStorage.removeItem('agreste_active_chat_id');
+      }
+    };
+    checkQueuedChat();
+    const interval = setInterval(checkQueuedChat, 200);
+    return () => clearInterval(interval);
+  }, [isClientMode]);
+
   // Sync sessions reactively from database
   useEffect(() => {
     const handleSync = () => {
@@ -298,6 +313,17 @@ export default function AgresteChat({
       messages: [...activeSession.messages, systemMsg],
       lastUpdated: new Date().toISOString()
     };
+
+    // Trigger floating notification for the selected technician
+    AGRESTE_DB.addNotification({
+      type: 'chat_request',
+      title: 'Chamado de Suporte Técnico',
+      message: `O cliente "${activeSession.clientName}" (${activeSession.clientCity}) selecionou você para atendimento imediato.`,
+      clientName: activeSession.clientName,
+      clientId: activeSession.id,
+      chatId: activeSession.id,
+      targetTech: techUsername
+    });
 
     const allChats = sessions.map(s => s.id === activeSession.id ? updatedSess : s);
     AGRESTE_DB.saveChats(allChats);

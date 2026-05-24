@@ -19,6 +19,7 @@ import SettingsTab from './components/SettingsTab';
 import UsersTab from './components/UsersTab';
 import Toast from './components/Toast';
 import AgresteChat from './components/AgresteChat';
+import FloatingNotifications from './components/FloatingNotifications';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -322,6 +323,15 @@ export default function App() {
           </AnimatePresence>
         </main>
       </div>
+
+      {/* Floating notifications for authenticated technicians */}
+      {currentUser && (
+        <FloatingNotifications 
+          currentUser={currentUser}
+          setActiveTab={setActiveTab}
+          showToast={showToast}
+        />
+      )}
 
       {/* Global Alert Notification Drawer */}
       <AnimatePresence>

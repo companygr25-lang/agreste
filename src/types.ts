@@ -117,3 +117,17 @@ export interface ChatSession {
   lastUpdated: string;
   unreadCount?: number;
 }
+
+export interface FloatingNotification {
+  id: string;
+  type: 'chat_request' | 'new_registration';
+  title: string;
+  message: string;
+  clientName: string;
+  clientId: string;
+  chatId?: string;
+  targetTech?: string; // technician username if specified
+  acceptedBy?: string; // which technician accepted this
+  status: 'pending' | 'accepted' | 'dismissed';
+  createdAt: string;
+}

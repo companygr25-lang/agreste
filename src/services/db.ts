@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Client, VisitReport, LargeClientActivity, CompanyDocument, Reminder, UserProfile, SystemUserDetail, ChatSession } from '../types';
+import { Client, VisitReport, LargeClientActivity, CompanyDocument, Reminder, UserProfile, SystemUserDetail, ChatSession, FloatingNotification } from '../types';
 import { isSupabaseConfigured, getSupabase } from './supabase';
 
 // Seed Initial Data
@@ -269,6 +269,18 @@ export class AGRESTE_DB {
     };
     clients.push(newClient);
     this.set('clients', clients);
+
+    // Trigger a notification for all technicians in case of pending confirmation signup
+    if (client.isPendingConfirmation) {
+      this.addNotification({
+        type: 'new_registration',
+        title: 'Novo Cadastro Efetuado',
+        message: `O cliente "${newClient.name}" (${newClient.city}) realizou seu cadastro pendente por chatbot/portal e aguarda validação no painel.`,
+        clientName: newClient.name,
+        clientId: newClient.id
+      });
+    }
+
     return newClient;
   }
 
@@ -439,6 +451,73 @@ export class AGRESTE_DB {
 
   static saveChats(chats: ChatSession[]): void {
     this.set('chats', chats);
+  }
+
+  // --- Floating Notifications Helpers ---
+  static getNotifications(): FloatingNotification[] {
+    return this.get<FloatingNotification[]>('notifications', []);
+  }
+
+  static saveNotifications(notifications: FloatingNotification[]): void {
+    this.set('notifications', notifications);
+  }
+
+  static addNotification(notif: Omit<FloatingNotification, 'id' | 'createdAt' | 'status'>): FloatingNotification {
+    const notifications = this.getNotifications();
+    const newNotif: FloatingNotification = {
+      ...notif,
+      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      createdAt: new Date().toISOString(),
+      status: 'pending'
+    };
+    notifications.push(newNotif);
+    this.saveNotifications(notifications);
+    return newNotif;
+  }
+
+  static getUserDisplayName(username: string): string {
+    const details = this.getUserDetails();
+    const lower = username.toLowerCase().trim();
+    if (details[lower] && details[lower].name) {
+      return details[lower].name;
+    }
+    return username;
+  }
+
+  static tryAcceptNotification(notificationId: string, techUsername: string): { success: boolean; message: string; notification?: FloatingNotification } {
+    const notifications = this.getNotifications();
+    const index = notifications.findIndex(n => n.id === notificationId);
+    
+    if (index === -1) {
+      return { success: false, message: 'Esta notificação não está mais ativa.' };
+    }
+
+    const notif = notifications[index];
+
+    // If already accepted by someone else
+    if (notif.status === 'accepted' && notif.acceptedBy && notif.acceptedBy !== techUsername) {
+      const display = this.getUserDisplayName(notif.acceptedBy);
+      
+      // Update this notification to dismissed so it hides from this screen
+      notif.status = 'dismissed';
+      this.saveNotifications(notifications);
+
+      return { 
+        success: false, 
+        message: `O técnico "${display}" já carregou o atendimento / cadastro referente a este chamado!` 
+      };
+    }
+
+    // Accept it
+    notif.status = 'accepted';
+    notif.acceptedBy = techUsername;
+    this.saveNotifications(notifications);
+
+    return { 
+      success: true, 
+      message: 'Atendimento aceito com sucesso!', 
+      notification: notif 
+    };
   }
 
   // --- Database Sync Check for Supabase migration compatibility ---
