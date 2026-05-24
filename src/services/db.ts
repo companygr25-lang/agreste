@@ -294,14 +294,45 @@ export class AGRESTE_DB {
   }
 
   static deleteClient(id: string): void {
-    const clients = this.getClients().filter(c => c.id !== id);
-    this.set('clients', clients);
+    const clients = this.getClients();
+    const clientToDelete = clients.find(c => c.id === id);
+    const filteredClients = clients.filter(c => c.id !== id);
+    this.set('clients', filteredClients);
+    
     // Also remove from calendar
     const calendar = this.getCalendar().filter(c => c.clientId !== id);
     this.set('calendar', calendar);
+    
     // Also remove associated chat session
     const chats = this.getChats().filter(chat => chat.id !== id);
     this.saveChats(chats);
+
+    // Also remove any matching customer account credentials in client_chat_accounts
+    if (clientToDelete) {
+      const accounts = this.getClientChatAccounts();
+      const responsibleLower = clientToDelete.responsible?.toLowerCase().trim();
+      const nameLower = clientToDelete.name?.toLowerCase().trim();
+      const phoneDigits = clientToDelete.phone ? clientToDelete.phone.replace(/\D/g, '') : '';
+
+      let changed = false;
+      for (const [usr, acc] of Object.entries(accounts)) {
+        const accResp = acc.responsible ? acc.responsible.toLowerCase().trim() : '';
+        const accName = acc.name ? acc.name.toLowerCase().trim() : '';
+        const accPhone = acc.phone ? acc.phone.replace(/\D/g, '') : '';
+
+        // If it matches the deleted client credentials, delete this chat login account as well!
+        if (usr.toLowerCase().trim() === responsibleLower || 
+            accResp === responsibleLower || 
+            accName === nameLower ||
+            (phoneDigits && accPhone && (phoneDigits.includes(accPhone) || accPhone.includes(phoneDigits)))) {
+          delete accounts[usr];
+          changed = true;
+        }
+      }
+      if (changed) {
+        this.saveClientChatAccounts(accounts);
+      }
+    }
   }
 
   // --- Reports CRUD ---

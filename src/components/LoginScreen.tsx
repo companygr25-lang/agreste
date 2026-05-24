@@ -194,8 +194,25 @@ export default function LoginScreen({
     const cleanUsr = clientUsername.toLowerCase().trim();
 
     if (accounts[cleanUsr]) {
-      showToast('Este nome de usuário de atendimento já está em uso.', 'error');
-      return;
+      const clients = AGRESTE_DB.getClients();
+      const associatedClient = clients.find(c => {
+        const cResp = c.responsible ? c.responsible.toLowerCase().trim() : '';
+        const cPhoneDigits = c.phone ? c.phone.replace(/\D/g, '') : '';
+        const acc = accounts[cleanUsr];
+        const accResp = acc.responsible ? acc.responsible.toLowerCase().trim() : '';
+        const accPhone = acc.phone ? acc.phone.replace(/\D/g, '') : '';
+        
+        return cResp === cleanUsr || cResp === accResp || (cPhoneDigits && accPhone && (cPhoneDigits.includes(accPhone) || accPhone.includes(cPhoneDigits)));
+      });
+
+      if (!associatedClient) {
+        // Orphan account! Self-heal: Delete it so the user can register again
+        delete accounts[cleanUsr];
+        AGRESTE_DB.saveClientChatAccounts(accounts);
+      } else {
+        showToast('Este nome de usuário de atendimento já está em uso.', 'error');
+        return;
+      }
     }
 
     // Move to Step 2: Information form asking for Company, Responsible, City, Phone
