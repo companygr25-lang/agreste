@@ -54,10 +54,9 @@ export default function AgresteChat({
     
     // Auto open first chat for Tech if unselected
     if (!isClientMode) {
-      const currentSessions = AGRESTE_DB.getChats();
-      if (currentSessions.length > 0 && !activeSessionId) {
-        // filter or sort in real world. Let's auto-select first
-        setActiveSessionId(currentSessions[0].id);
+      const mySessions = AGRESTE_DB.getChats().filter(s => s.assignedTech === loggedTechUsername);
+      if (mySessions.length > 0 && !activeSessionId) {
+        setActiveSessionId(mySessions[0].id);
       }
     } else if (currentClient) {
       // In Client mode, make sure this client's session exists and is active
@@ -104,7 +103,7 @@ export default function AgresteChat({
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [sessions, activeSessionId]);
 
-  const activeSession = sessions.find(s => s.id === activeSessionId);
+  const activeSession = sessions.find(s => s.id === activeSessionId && (isClientMode || s.assignedTech === loggedTechUsername));
 
   // Get active technicians list
   const userDetails = AGRESTE_DB.getUserDetails();
@@ -624,60 +623,62 @@ export default function AgresteChat({
             </div>
 
             <div className="flex-1 overflow-y-auto divide-y divide-zinc-900/10 dark:divide-zinc-900 scrollbar-thin">
-              {sessions.length === 0 ? (
+              {sessions.filter(sess => sess.assignedTech === loggedTechUsername).length === 0 ? (
                 <div className="p-8 text-center text-zinc-500 text-xs">
                   <MessageSquare className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
-                  Nenhum chat aberto no sistema ainda.
+                  Nenhum chat de atendimento atribuído a você ainda.
                 </div>
               ) : (
-                sessions.sort((a,b)=> new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()).map((sess) => {
-                  const isThreadActive = sess.id === activeSessionId;
-                  const isUnassignedTechCall = sess.status === 'tech_requested' && !sess.assignedTech;
-                  const isAssignedToMe = sess.assignedTech === loggedTechUsername;
-                  const hasUnread = sess.status === 'tech_requested' && (isUnassignedTechCall || isAssignedToMe);
+                sessions
+                  .filter(sess => sess.assignedTech === loggedTechUsername)
+                  .sort((a,b)=> new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime())
+                  .map((sess) => {
+                    const isThreadActive = sess.id === activeSessionId;
+                    const isAssignedToMe = sess.assignedTech === loggedTechUsername;
+                    const hasUnread = sess.status === 'tech_requested' && isAssignedToMe;
 
-                  return (
-                    <button
-                      key={sess.id}
-                      onClick={() => setActiveSessionId(sess.id)}
-                      className={`w-full p-3.5 text-left transition-all flex flex-col gap-1 cursor-pointer ${
-                        isThreadActive 
-                          ? 'bg-[#D35400]/10 border-l-4 border-[#D35400]' 
-                          : 'hover:bg-zinc-800/10 dark:hover:bg-zinc-800/20'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs truncate max-w-[140px] text-zinc-200">{sess.clientName}</span>
-                        {/* New Client indicators */}
-                        {sess.isNewClient ? (
-                          <span className="text-[8px] px-1 py-0.5 bg-amber-600/15 border border-amber-500/20 text-amber-500 font-bold rounded">NOVO</span>
-                        ) : (
-                          <span className="text-[8px] text-zinc-600 font-bold">CLIENTE</span>
-                        )}
-                      </div>
+                    return (
+                      <button
+                        key={sess.id}
+                        onClick={() => setActiveSessionId(sess.id)}
+                        className={`w-full p-3.5 text-left transition-all flex flex-col gap-1 cursor-pointer ${
+                          isThreadActive 
+                            ? 'bg-[#D35400]/10 border-l-4 border-[#D35400]' 
+                            : 'hover:bg-zinc-800/10 dark:hover:bg-zinc-800/20'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs truncate max-w-[140px] text-zinc-200">{sess.clientName}</span>
+                          {/* New Client indicators */}
+                          {sess.isNewClient ? (
+                            <span className="text-[8px] px-1 py-0.5 bg-amber-600/15 border border-amber-500/20 text-amber-500 font-bold rounded">NOVO</span>
+                          ) : (
+                            <span className="text-[8px] text-zinc-600 font-bold">CLIENTE</span>
+                          )}
+                        </div>
 
-                      <div className="flex justify-between items-center mt-1">
-                        <span className="text-[10px] text-zinc-500 truncate max-w-[140px] font-mono">{sess.clientCity}</span>
-                        
-                        {/* Session status tags */}
-                        {sess.status === 'bot' && (
-                          <span className="text-[8px] px-1.5 py-0.5 bg-zinc-800 text-zinc-400 rounded-sm">BOT AUTOMATO</span>
-                        )}
-                        {sess.status === 'tech_requested' && !sess.assignedTech && (
-                          <span className="text-[8px] px-1.5 py-0.5 bg-red-600/20 border border-red-500/10 text-red-400 font-bold animate-pulse rounded-sm">CHAMADO</span>
-                        )}
-                        {sess.status === 'active_with_tech' && (
-                          <span className="text-[8px] px-1.5 py-0.5 bg-emerald-600/20 text-emerald-400 font-semibold rounded-sm">
-                            {sess.assignedTech === loggedTechUsername ? 'Com Você' : 'Em Chat'}
-                          </span>
-                        )}
-                      </div>
+                        <div className="flex justify-between items-center mt-1">
+                          <span className="text-[10px] text-zinc-500 truncate max-w-[140px] font-mono">{sess.clientCity}</span>
+                          
+                          {/* Session status tags */}
+                          {sess.status === 'bot' && (
+                            <span className="text-[8px] px-1.5 py-0.5 bg-zinc-800 text-zinc-400 rounded-sm">BOT AUTOMATO</span>
+                          )}
+                          {sess.status === 'tech_requested' && !sess.assignedTech && (
+                            <span className="text-[8px] px-1.5 py-0.5 bg-red-600/20 border border-red-500/10 text-red-400 font-bold animate-pulse rounded-sm">CHAMADO</span>
+                          )}
+                          {sess.status === 'active_with_tech' && (
+                            <span className="text-[8px] px-1.5 py-0.5 bg-emerald-600/20 text-emerald-400 font-semibold rounded-sm">
+                              {sess.assignedTech === loggedTechUsername ? 'Com Você' : 'Em Chat'}
+                            </span>
+                          )}
+                        </div>
 
-                      {/* Phone metadata */}
-                      <span className="text-[9px] text-zinc-500 font-mono mt-0.5">{sess.clientPhone}</span>
-                    </button>
-                  );
-                })
+                        {/* Phone metadata */}
+                        <span className="text-[9px] text-zinc-500 font-mono mt-0.5">{sess.clientPhone}</span>
+                      </button>
+                    );
+                  })
               )}
             </div>
           </div>
