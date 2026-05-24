@@ -8,7 +8,7 @@ import { Client, PestStatus, VisitReport, PaymentStatus } from '../types';
 import { AGRESTE_DB } from '../services/db';
 import { 
   Users, MapPin, User, PlusCircle, CheckCircle, X, Search, 
-  Trash2, Edit, ClipboardList, AlertTriangle, AlertCircle, Sparkles, Phone
+  Trash2, Edit, ClipboardList, AlertTriangle, AlertCircle, Sparkles, Phone, Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -117,6 +117,16 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
   // Delete Client
   const handleDeleteClient = (id: string, name: string) => {
     setDeleteConfirm({ id, name });
+  };
+
+  // Confirm pending client registration from chatbot signup
+  const handleConfirmClient = (client: Client) => {
+    const updated = { ...client, isPendingConfirmation: false };
+    AGRESTE_DB.updateClient(updated);
+    if (onRefreshData) {
+      onRefreshData();
+    }
+    showToast(`Cadastro de "${client.name}" verificado e confirmado no sistema!`, 'success');
   };
 
   // Edit client actions
@@ -386,7 +396,13 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
             <div 
               key={client.id}
               className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
-                theme === 'dark' ? 'bg-[#1A1A1A] border-[#242424]' : 'bg-white border-zinc-200 shadow-xs'
+                client.isPendingConfirmation
+                  ? theme === 'dark'
+                    ? 'bg-amber-600/5 border-amber-500/70 relative shadow-[0_0_15px_rgba(245,158,11,0.15)] animate-[pulse_3s_infinite]'
+                    : 'bg-amber-50 border-amber-500 relative shadow-[0_0_15px_rgba(245,158,11,0.1)]'
+                  : theme === 'dark' 
+                    ? 'bg-[#1A1A1A] border-[#242424]' 
+                    : 'bg-white border-zinc-200 shadow-xs'
               }`}
             >
               {/* Left Group: Code, Name, Details */}
@@ -406,8 +422,13 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
                   </div>
                 </div>
                 <div className="min-w-0 text-left">
-                  <h4 className="font-bold text-sm md:text-md text-zinc-200 dark:text-zinc-100 truncate">
-                    {client.name}
+                  <h4 className="font-bold text-sm md:text-md text-zinc-200 dark:text-zinc-100 flex flex-wrap items-center gap-1.5 truncate">
+                    <span>{client.name}</span>
+                    {client.isPendingConfirmation && (
+                      <span className="text-[9px] px-2 py-0.5 bg-amber-600 text-white rounded-full font-extrabold uppercase tracking-wider animate-bounce inline-flex items-center gap-1 shrink-0">
+                        <Sparkles className="w-2.5 h-2.5 animate-spin" /> NOVO CADASTRO (CONFIRMAR)
+                      </span>
+                    )}
                   </h4>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-400 mt-1">
                     <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-[#D35400]" /> {client.city}</span>
@@ -446,7 +467,16 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  {canEdit && (
+                  {client.isPendingConfirmation && canEdit && (
+                    <button
+                      onClick={() => handleConfirmClient(client)}
+                      className="px-3 py-2 bg-gradient-to-r from-amber-600 to-amber-550 hover:from-amber-500 hover:to-amber-450 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-amber-500/15"
+                      title="Clique para contatar e confirmar o cadastro deste cliente"
+                    >
+                      <Check className="w-4 h-4" /> <span>Confirmar Cadastro e Contato</span>
+                    </button>
+                  )}
+                  {canEdit && !client.isPendingConfirmation && (
                     <button
                       onClick={() => openVisitModal(client)}
                       className="px-3 py-2 bg-[#D35400]/10 hover:bg-[#D35400] text-[#D35400] hover:text-white border border-[#D35400]/20 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"

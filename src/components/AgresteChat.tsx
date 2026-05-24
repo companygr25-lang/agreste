@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, Send, Bot, User, X, Check, AlertCircle, 
-  Sparkles, LogOut, CheckCheck, Landmark, Phone, MapPin, Building
+  Sparkles, LogOut, CheckCheck, Landmark, Phone, MapPin, Building, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AGRESTE_DB } from '../services/db';
@@ -23,6 +23,7 @@ interface AgresteChatProps {
     phone: string;
     city: string;
     isNew: boolean;
+    isGuest?: boolean;
   } | null;
   onLogoutClient?: () => void; // Client logout transition
 }
@@ -36,6 +37,8 @@ export default function AgresteChat({
   const [sessions, setSessions] = useState<ChatSession[]>(() => AGRESTE_DB.getChats());
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [inputText, setInputText] = useState('');
+  const [showBotRegisterModal, setShowBotRegisterModal] = useState(false);
+  const [deleteChatConfirm, setDeleteChatConfirm] = useState<ChatSession | null>(null);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -125,17 +128,73 @@ export default function AgresteChat({
       lastUpdated: new Date().toISOString()
     };
 
-    const allChats = sessions.map(s => s.id === activeSession.id ? updatedSession : s);
-    AGRESTE_DB.saveChats(allChats);
-    setSessions(allChats);
-    setInputText('');
-
-    // Trigger BOT response if session is in bot state
+    // Trigger BOT response depending on state
     if (activeSession.status === 'bot') {
+      const allChats = sessions.map(s => s.id === activeSession.id ? updatedSession : s);
+      AGRESTE_DB.saveChats(allChats);
+      setSessions(allChats);
+      setInputText('');
       setTimeout(() => {
         handleBotAutoReply(textToSend, updatedSession);
       }, 750);
+    } else if (activeSession.status === 'rating') {
+      // If customer writes something while in rating state, thank them and reset status back to bot menu!
+      const botResponse: ChatMessage = {
+        id: `msg-rating-reset-${Date.now()}`,
+        sender: 'bot',
+        senderName: 'Assistente Agreste',
+        text: `Obrigado por sua resposta! Retornei você ao assistente virtual da Agreste. Como posso te ajudar agora? Selecione um comando de auxílio abaixo:`,
+        timestamp: new Date().toISOString()
+      };
+      const resetSession: ChatSession = {
+        ...updatedSession,
+        status: 'bot', // transition back to chatbot!
+        messages: [...updatedSession.messages, botResponse],
+        lastUpdated: new Date().toISOString()
+      };
+      const allChats = sessions.map(s => s.id === activeSession.id ? resetSession : s);
+      AGRESTE_DB.saveChats(allChats);
+      setSessions(allChats);
+      setInputText('');
+    } else {
+      const allChats = sessions.map(s => s.id === activeSession.id ? updatedSession : s);
+      AGRESTE_DB.saveChats(allChats);
+      setSessions(allChats);
+      setInputText('');
     }
+  };
+
+  // Submit client rating response
+  const handleRateService = (rating: number) => {
+    if (!activeSession) return;
+
+    const rateMsg: ChatMessage = {
+      id: `rate-client-${Date.now()}`,
+      sender: 'client',
+      senderName: activeSession.responsibleName,
+      text: `Nota do suporte: ${rating}/10 ⭐`,
+      timestamp: new Date().toISOString()
+    };
+
+    const sysResponse: ChatMessage = {
+      id: `rate-bot-${Date.now()}`,
+      sender: 'bot',
+      senderName: 'Assistente Agreste',
+      text: `Obrigado por avaliar o nosso atendimento técnico com nota ${rating}! 🎉 Sua opinião é muito importante para nós. \n\nRetornei você ao menu principal do chatbot da Agreste Saúde Ambiental. Como posso te ajudar hoje? Selecione um comando abaixo:`,
+      timestamp: new Date().toISOString()
+    };
+
+    const updatedSession: ChatSession = {
+      ...activeSession,
+      status: 'bot', // transition back to chatbot!
+      messages: [...activeSession.messages, rateMsg, sysResponse],
+      lastUpdated: new Date().toISOString()
+    };
+
+    const allChats = sessions.map(s => s.id === activeSession.id ? updatedSession : s);
+    AGRESTE_DB.saveChats(allChats);
+    setSessions(allChats);
+    showToast(`Obrigado pela sua avaliação de nota ${rating}!`, 'success');
   };
 
   // Bot auto responder decision tree
@@ -314,18 +373,26 @@ export default function AgresteChat({
       isSystem: true
     };
 
+    const ratingPromptMsg: ChatMessage = {
+      id: `sys-rating-prompt-${Date.now()}`,
+      sender: 'bot',
+      senderName: 'Robô Agreste',
+      text: `Como foi o seu atendimento técnico? Por favor, avalie o nosso suporte selecionando uma nota de 0 a 10 no menu de avaliação abaixo:`,
+      timestamp: new Date().toISOString()
+    };
+
     const updatedSess: ChatSession = {
       ...sessToRelease,
-      status: 'bot',
+      status: 'rating', // Change from 'bot' to 'rating' so rating selector renders
       assignedTech: undefined,
-      messages: [...sessToRelease.messages, sysMsg],
+      messages: [...sessToRelease.messages, sysMsg, ratingPromptMsg],
       lastUpdated: new Date().toISOString()
     };
 
     const allChats = sessions.map(s => s.id === sessionId ? updatedSess : s);
     AGRESTE_DB.saveChats(allChats);
     setSessions(allChats);
-    showToast('Atendimento retornado ao robô.', 'info');
+    showToast('Atendimento retornado ao robô para avaliação do cliente.', 'info');
   };
 
   // Format date helper
@@ -374,6 +441,26 @@ export default function AgresteChat({
             )}
           </header>
 
+          {/* Guest Registration Highlight Callout */}
+          {isClientMode && (currentClient?.id.startsWith('guest-') || currentClient?.isGuest) && (
+            <div className="mx-4 mt-3 p-3 bg-gradient-to-r from-teal-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 rounded-xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 shadow">
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 animate-pulse">
+                  <Sparkles className="w-3.5 h-3.5 animate-spin" /> Cadastro de Visitante Ativo no Bot
+                </p>
+                <p className="text-[10px] text-zinc-400 mt-0.5 max-w-xl">
+                  Você está navegando em modo de demonstração. Complete agora o seu cadastro de parceiro para ter prioridade e ser atendido no painel de especialistas!
+                </p>
+              </div>
+              <button
+                onClick={() => setShowBotRegisterModal(true)}
+                className="py-1.5 px-3.5 bg-emerald-605 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold uppercase rounded-lg transition-all cursor-pointer shadow-lg shadow-emerald-500/10 shrink-0"
+              >
+                Cadastrar Agora
+              </button>
+            </div>
+          )}
+
           {/* Client Chat Area */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin flex flex-col">
             {activeSession?.messages.map((msg) => {
@@ -416,25 +503,55 @@ export default function AgresteChat({
           {activeSession?.status === 'bot' && (
             <div className={`p-4 border-t ${theme === 'dark' ? 'bg-zinc-950/60 border-zinc-900' : 'bg-zinc-50 border-zinc-200'}`}>
               <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 text-left mb-2">Comandos Rápidos de Triagem:</p>
-              <div className="flex flex-col sm:flex-row gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+                {(currentClient?.id.startsWith('guest-') || currentClient?.isGuest) && (
+                  <button
+                    onClick={() => setShowBotRegisterModal(true)}
+                    className="py-2 px-3 border border-emerald-500 hover:border-emerald-400 bg-emerald-650 bg-emerald-600 hover:bg-emerald-550 text-white text-xs text-left rounded-xl transition-all cursor-pointer font-extrabold flex items-center gap-2 shadow"
+                  >
+                    <span>📝</span> Realizar Cadastro Rápido pelo Bot
+                  </button>
+                )}
                 <button
                   onClick={() => handleSelectOption('schedule')}
-                  className="flex-1 py-2 px-3 border border-zinc-800 hover:border-orange-500/40 bg-zinc-950 hover:bg-orange-500/10 text-xs text-left rounded-xl hover:text-orange-400 transition-all cursor-pointer font-semibold flex items-center gap-2"
+                  className="py-2 px-3 border border-zinc-800 hover:border-orange-500/40 bg-zinc-950 hover:bg-orange-500/10 text-xs text-left rounded-xl hover:text-orange-400 transition-all cursor-pointer font-semibold flex items-center gap-2"
                 >
                   <span>📅</span> Solicitar Agendamento
                 </button>
                 <button
                   onClick={() => handleSelectOption('payment')}
-                  className="flex-1 py-2 px-3 border border-zinc-800 hover:border-orange-500/40 bg-zinc-950 hover:bg-orange-500/10 text-xs text-left rounded-xl hover:text-orange-400 transition-all cursor-pointer font-semibold flex items-center gap-2"
+                  className="py-2 px-3 border border-zinc-800 hover:border-orange-500/40 bg-zinc-950 hover:bg-orange-500/10 text-xs text-left rounded-xl hover:text-orange-400 transition-all cursor-pointer font-semibold flex items-center gap-2"
                 >
                   <span>💳</span> Solicitar Faturamento / Boleto
                 </button>
                 <button
                   onClick={() => handleSelectOption('request_tech')}
-                  className="flex-1 py-2 px-3 bg-[#D35400] hover:bg-[#FC6B0A] text-white text-xs text-left rounded-xl transition-all cursor-pointer font-bold flex items-center gap-2 shadow-lg shadow-orange-500/10"
+                  className="py-2 px-3 bg-[#D35400] hover:bg-[#FC6B0A] text-white text-xs text-left rounded-xl transition-all cursor-pointer font-bold flex items-center gap-2 shadow-lg shadow-orange-500/10 col-span-1"
                 >
                   <span>🔧</span> Chamar Atendimento Técnico
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Service Rating Block */}
+          {activeSession?.status === 'rating' && (
+            <div className={`p-4 border-t ${theme === 'dark' ? 'bg-[#18181B] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-orange-400 text-left mb-3 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-orange-400 animate-pulse" />
+                Avalie o seu Atendimento Técnico (0 a 10):
+              </p>
+              <div className="flex flex-wrap justify-center gap-2 py-1">
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((val) => (
+                  <button
+                    key={val}
+                    onClick={() => handleRateService(val)}
+                    className="w-10 h-10 rounded-full bg-zinc-950 border border-zinc-800 text-zinc-350 hover:bg-gradient-to-r hover:from-orange-600 hover:to-orange-550 hover:text-white hover:border-orange-550 text-sm font-extrabold transition-all cursor-pointer flex items-center justify-center select-none active:scale-90 shadow shadow-black/40"
+                    id={`rate-${val}`}
+                  >
+                    {val}
+                  </button>
+                ))}
               </div>
             </div>
           )}
@@ -598,6 +715,13 @@ export default function AgresteChat({
                         Devolver pro Bot
                       </button>
                     )}
+                    <button
+                      onClick={() => setDeleteChatConfirm(activeSession)}
+                      className="p-1.5 border border-red-500/30 text-red-400 hover:text-white hover:bg-red-600 hover:border-red-650 rounded-lg transition-colors cursor-pointer"
+                      title="Excluir Definitivamente este Chat"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </header>
 
@@ -688,6 +812,224 @@ export default function AgresteChat({
 
         </div>
       )}
+
+      {/* Bot Registration Modal */}
+      <AnimatePresence>
+        {showBotRegisterModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowBotRegisterModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs" 
+            />
+            
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className={`relative w-full max-w-sm rounded-2xl border p-5 shadow-2xl text-left ${
+                theme === 'dark' ? 'bg-[#18181B] border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
+              }`}
+            >
+              <button 
+                onClick={() => setShowBotRegisterModal(false)}
+                className="absolute top-4 right-4 text-zinc-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <h3 className="text-sm font-bold text-orange-400 flex items-center gap-1.5 mb-2">
+                <Sparkles className="w-5 h-5 animate-pulse" />
+                Cadastro Rápido pelo Assistente
+              </h3>
+              <p className="text-[10px] text-zinc-400 mb-4">
+                Insira as informações do seu estabelecimento para enviar diretamente ao painel técnico.
+              </p>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
+                const name = fd.get('name') as string;
+                const city = fd.get('city') as string;
+                const resp = fd.get('responsible') as string;
+                const phone = fd.get('phone') as string;
+
+                if (!name?.trim() || !city?.trim() || !resp?.trim() || !phone?.trim()) {
+                  showToast('Por favor, preencha todos os campos.', 'error');
+                  return;
+                }
+
+                // 1. Create client in DB with isPendingConfirmation: true
+                const newCli = AGRESTE_DB.addClient({
+                  name: name.trim(),
+                  city: city.trim(),
+                  responsible: resp.trim(),
+                  phone: phone.trim(),
+                  paymentStatus: 'pendente',
+                  size: 'pequeno',
+                  isPendingConfirmation: true // Destaque na tela de clientes!
+                });
+
+                // 2. Add as client account
+                const accounts = AGRESTE_DB.getClientChatAccounts();
+                const cleanUsr = resp.toLowerCase().trim().replace(/\s/g, '');
+                accounts[cleanUsr] = {
+                  password: '123',
+                  phone: phone.trim(),
+                  name: name.trim(),
+                  responsible: resp.trim(),
+                  city: city.trim(),
+                  isRegistered: true
+                };
+                AGRESTE_DB.saveClientChatAccounts(accounts);
+
+                // 3. Update current logged client
+                const loggedInfo = {
+                  id: newCli.id,
+                  name: name.trim(),
+                  responsible: resp.trim(),
+                  phone: phone.trim(),
+                  city: city.trim(),
+                  isNew: true
+                };
+                localStorage.setItem('agreste_logged_client', JSON.stringify(loggedInfo));
+
+                // 4. Update the active session messages with welcome info!
+                if (activeSession) {
+                  const clientNoteMsg: ChatMessage = {
+                    id: `msg-signup-sys-${Date.now()}`,
+                    sender: 'client',
+                    senderName: resp.trim(),
+                    text: `📝 Enviei meu cadastro rápido pelo assistente virtual: \nEmpresa: ${name}\nResponsável: ${resp}\nCidade: ${city}\nWhatsApp: ${phone}`,
+                    timestamp: new Date().toISOString()
+                  };
+                  
+                  const botNoteMsg: ChatMessage = {
+                    id: `msg-signup-bot-${Date.now()}`,
+                    sender: 'bot',
+                    senderName: 'Robô Agreste',
+                    text: `Excelente, seu cadastro foi recebido com sucesso! 🎉\n\nVocê já está aparecendo em destaque com prioridade máxima para a nossa equipe técnica no painel. Chamei um técnico para validar seu contato!`,
+                    timestamp: new Date().toISOString()
+                  };
+
+                  const updatedSess: ChatSession = {
+                    ...activeSession,
+                    id: newCli.id, // Migrate session ID to actual client ID!
+                    clientUsername: cleanUsr,
+                    clientName: name.trim(),
+                    responsibleName: resp.trim(),
+                    clientCity: city.trim(),
+                    clientPhone: phone.trim(),
+                    status: 'tech_requested', // Chamar técnico automaticamente!
+                    messages: [...activeSession.messages, clientNoteMsg, botNoteMsg],
+                    lastUpdated: new Date().toISOString()
+                  };
+
+                  // Remove old guest session, insert new client session
+                  const currentChats = AGRESTE_DB.getChats().filter(c => c.id !== activeSession.id);
+                  const updatedChats = [...currentChats, updatedSess];
+                  AGRESTE_DB.saveChats(updatedChats);
+                  setSessions(updatedChats);
+                  setActiveSessionId(newCli.id);
+                }
+
+                showToast('Cadastro realizado com sucesso! Técnico notificado.', 'success');
+                setShowBotRegisterModal(false);
+                
+                // Force page refresh for logged client status update
+                setTimeout(() => window.location.reload(), 2000);
+              }} className="space-y-4">
+                <div>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider mb-1 text-zinc-400">Nome do Estabelecimento *</label>
+                  <input type="text" name="name" required placeholder="Ex: Mercado Central" className="w-full py-2 px-3 rounded-xl border text-xs bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400] outline-none" />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider mb-1 text-zinc-400">Seu Nome (Responsável) *</label>
+                  <input type="text" name="responsible" required placeholder="Ex: Roberto Alves" className="w-full py-2 px-3 rounded-xl border text-xs bg-zinc-950 border-zinc-850 text-white focus:border-[#D35400] outline-none" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[9px] font-bold uppercase tracking-wider mb-1 text-zinc-400">Cidade *</label>
+                    <input type="text" name="city" required placeholder="Ex: Caruaru" className="w-full py-2 px-3 rounded-xl border text-xs bg-zinc-950 border-zinc-850 text-white focus:border-[#D35400] outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-bold uppercase tracking-wider mb-1 text-zinc-400 font-mono">WhatsApp *</label>
+                    <input type="text" name="phone" required placeholder="Ex: (81) 99999-1234" className="w-full py-2 px-3 rounded-xl border text-xs bg-zinc-950 border-zinc-850 text-white focus:border-[#D35400] outline-none" />
+                  </div>
+                </div>
+                <button type="submit" className="w-full mt-2 py-2 bg-emerald-600 hover:bg-emerald-550 text-white font-bold text-xs uppercase rounded-xl transition-all shadow-md shadow-emerald-600/10 cursor-pointer">
+                  Salvar e Solicitar Técnico
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Chat Confirmation Modal */}
+      <AnimatePresence>
+        {deleteChatConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDeleteChatConfirm(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs" 
+            />
+            
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className={`relative w-full max-w-sm rounded-2xl border p-5 shadow-2xl text-left ${
+                theme === 'dark' ? 'bg-[#18181B] border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
+              }`}
+            >
+              <h3 className="text-sm font-bold text-red-500 flex items-center gap-1.5 mb-2">
+                <AlertCircle className="w-5 h-5 animate-bounce" />
+                Excluir Chat e Registro?
+              </h3>
+              <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
+                Você tem certeza que deseja excluir permanentemente o chat de <strong>{deleteChatConfirm.clientName}</strong>? <br/><br/>
+                Isso apagará o histórico de conversas do banco de dados e também removerá o cadastro associado da sua lista de clientes do portal. Esta ação é definitiva e irreversível.
+              </p>
+
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setDeleteChatConfirm(null)}
+                  className="px-3 py-2 border border-zinc-800 hover:border-zinc-700 text-orange-400 hover:text-white rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const { id, clientName } = deleteChatConfirm;
+                    // 1. Delete chat
+                    const remainingChats = sessions.filter(s => s.id !== id);
+                    AGRESTE_DB.saveChats(remainingChats);
+                    setSessions(remainingChats);
+                    if (activeSessionId === id) {
+                      setActiveSessionId(null);
+                    }
+                    // 2. Cascade delete client matching id
+                    AGRESTE_DB.deleteClient(id);
+                    showToast(`O chat de "${clientName}" e seu registro de cliente foram removidos com sucesso.`, 'success');
+                    setDeleteChatConfirm(null);
+                  }}
+                  className="px-4 py-2 bg-red-650 hover:bg-red-650 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-lg shadow-red-600/10"
+                >
+                  Confirmar Exclusão
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

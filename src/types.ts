@@ -35,6 +35,7 @@ export interface Client {
   paymentStatus: PaymentStatus;
   size: 'grande' | 'pequeno';
   createdAt: string;
+  isPendingConfirmation?: boolean;
 }
 
 export interface PestControl {
@@ -111,7 +112,7 @@ export interface ChatSession {
   responsibleName: string;
   isNewClient: boolean;
   assignedTech?: string; // technician username
-  status: 'bot' | 'tech_requested' | 'active_with_tech';
+  status: 'bot' | 'tech_requested' | 'active_with_tech' | 'rating';
   messages: ChatMessage[];
   lastUpdated: string;
   unreadCount?: number;

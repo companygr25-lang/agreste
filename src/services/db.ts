@@ -287,6 +287,9 @@ export class AGRESTE_DB {
     // Also remove from calendar
     const calendar = this.getCalendar().filter(c => c.clientId !== id);
     this.set('calendar', calendar);
+    // Also remove associated chat session
+    const chats = this.getChats().filter(chat => chat.id !== id);
+    this.saveChats(chats);
   }
 
   // --- Reports CRUD ---

@@ -170,7 +170,8 @@ export default function LoginScreen({
       responsible: companyResponsible.trim(),
       city: companyCity.trim(),
       paymentStatus: 'pendente', // default pending payment
-      size: 'pequeno' // default size
+      size: 'pequeno', // default size
+      isPendingConfirmation: true // Highlight on the technician clients screen!
     });
 
     // 2. Persist their chat access credentials with linked profiling data
@@ -451,13 +452,36 @@ export default function LoginScreen({
                   <MessageSquare className="w-4 h-4" /> Iniciar Chat de Atendimento
                 </button>
 
-                <div className="pt-4 border-t border-zinc-900/10 dark:border-zinc-900 text-center">
+                <div className="pt-4 border-t border-zinc-900/10 dark:border-zinc-900 text-center space-y-3">
                   <button
                     type="button"
                     onClick={() => setClientSubState('register')}
-                    className="text-xs text-[#D35400] hover:text-[#FC6B0A] hover:underline cursor-pointer font-bold"
+                    className="text-xs text-[#D35400] hover:text-[#FC6B0A] hover:underline cursor-pointer font-bold block w-full"
                   >
                     Novo por aqui? Criar conta de cliente gratuitamente
+                  </button>
+                  <div className="text-zinc-650 text-[10px] font-bold uppercase tracking-wider py-1 flex items-center justify-center gap-2">
+                    <span className="w-8 h-px bg-zinc-800"></span> ou <span className="w-8 h-px bg-zinc-800"></span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const guestInfo = {
+                        id: `guest-${Date.now()}`,
+                        name: 'Visitante Temporário',
+                        responsible: 'Visitante',
+                        phone: '',
+                        city: '',
+                        isNew: true,
+                        isGuest: true
+                      };
+                      localStorage.setItem('agreste_logged_client', JSON.stringify(guestInfo));
+                      onClientLoginSuccess(guestInfo as any);
+                      showToast('Atendimento com o robô iniciado como Visitante!', 'success');
+                    }}
+                    className="w-full py-2 bg-transparent border border-orange-500/40 hover:border-orange-500 text-orange-400 hover:text-orange-300 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-colors"
+                  >
+                    <span>💬</span> Entrar como Visitante / Cadastro via Chatbot
                   </button>
                 </div>
               </form>
