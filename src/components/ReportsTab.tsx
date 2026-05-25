@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { VisitReport, PestStatus } from '../types';
 import { AGRESTE_DB } from '../services/db';
 import { 
   FileText, Search, Filter, Download, Trash2, Calendar, 
-  MapPin, User, ChevronDown, Check, Star, RefreshCw, AlertTriangle
+  MapPin, User, ChevronDown, Check, Star, RefreshCw, AlertTriangle, Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -28,6 +28,90 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
   const [filterDate, setFilterDate] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string; date: string } | null>(null);
   const [previewReport, setPreviewReport] = useState<VisitReport | null>(null);
+  const [shouldAutoPrint, setShouldAutoPrint] = useState(false);
+
+  // Auto-print effect when shouldAutoPrint and previewReport is loaded
+  useEffect(() => {
+    if (shouldAutoPrint && previewReport) {
+      const timer = setTimeout(() => {
+        handlePrintDocument(previewReport);
+        setShouldAutoPrint(false);
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldAutoPrint, previewReport]);
+
+  // Safe popout print technique to work reliably both inside and outside iFrames
+  const handlePrintDocument = (report: VisitReport) => {
+    try {
+      const reportElement = document.getElementById('printable-paper-report');
+      if (!reportElement) {
+        // Fallback to normal print if element hasn't mounted yet
+        window.print();
+        return;
+      }
+
+      // Collect all stylesheets and inline rules from the parent document
+      const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+        .map(el => el.outerHTML)
+        .join('\n');
+
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>AGRESTE_Relatorio_${report.clientName.replace(/\s+/g, '_')}</title>
+              ${styles}
+              <style>
+                @media print {
+                  body {
+                    background: white !important;
+                    color: black !important;
+                  }
+                }
+                body {
+                  font-family: system-ui, -apple-system, sans-serif;
+                  background: white;
+                  color: #111827;
+                  padding: 20px;
+                }
+                #printable-paper-report {
+                  max-height: none !important;
+                  overflow: visible !important;
+                  border: none !important;
+                  box-shadow: none !important;
+                  padding: 0 !important;
+                }
+              </style>
+            </head>
+            <body>
+              <div id="printable-paper-report">
+                ${reportElement.innerHTML}
+              </div>
+              <script>
+                window.focus();
+                setTimeout(() => {
+                  window.print();
+                  setTimeout(() => {
+                    window.close();
+                  }, 150);
+                }, 500);
+              </script>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+      } else {
+        // Fallback if window.open popup was blocked
+        window.print();
+      }
+    } catch (error) {
+      console.error("Print popup blocked or failed, falling back to window.print", error);
+      window.print();
+    }
+  };
 
   // Delete report
   const handleDeleteReport = (id: string, clientName: string, date: string) => {
@@ -41,29 +125,29 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
       return;
     }
 
-    // CSV Header with BOM for correct Portuguese accents in Excel
-    let csvContent = '\uFEFF';
+    // CSV Header with BOM and explicit sep marker for Microsoft Excel
+    let csvContent = '\uFEFFsep=;\n';
     csvContent += 'ID;Cliente;Cidade;Mes;Data;Tecnico;Pontualidade;Comunicacao;Moscas;Baratas;Ratos;Formigas;Recomendacoes;Satisfacao;Comentarios;Indicacoes;Data Criacao\n';
 
     filteredReports.forEach((rep) => {
       const line = [
-        rep.id,
-        `"${rep.clientName.replace(/"/g, '""')}"`,
-        `"${rep.clientCity.replace(/"/g, '""')}"`,
-        `"${rep.month}"`,
-        rep.date,
-        `"${rep.techName.replace(/"/g, '""')}"`,
-        rep.punctuality,
-        rep.communication,
-        rep.pests.moscas.toUpperCase(),
-        rep.pests.baratas.toUpperCase(),
-        rep.pests.ratos.toUpperCase(),
-        rep.pests.formigas.toUpperCase(),
-        `"${(rep.recommendations || '').replace(/"/g, '""')}"`,
-        `"${rep.satisfaction}"`,
-        `"${(rep.comments || '').replace(/"/g, '""')}"`,
-        `"${(rep.referrals || '').replace(/"/g, '""')}"`,
-        rep.createdAt
+        rep.id || '',
+        `"${(rep.clientName || '').toString().replace(/"/g, '""')}"`,
+        `"${(rep.clientCity || '').toString().replace(/"/g, '""')}"`,
+        `"${(rep.month || '').toString().replace(/"/g, '""')}"`,
+        `"${(rep.date || '').toString().replace(/"/g, '""')}"`,
+        `"${(rep.techName || '').toString().replace(/"/g, '""')}"`,
+        rep.punctuality ?? '',
+        rep.communication ?? '',
+        `"${(rep.pests?.moscas || '').toString().toUpperCase()}"`,
+        `"${(rep.pests?.baratas || '').toString().toUpperCase()}"`,
+        `"${(rep.pests?.ratos || '').toString().toUpperCase()}"`,
+        `"${(rep.pests?.formigas || '').toString().toUpperCase()}"`,
+        `"${(rep.recommendations || '').toString().replace(/"/g, '""')}"`,
+        `"${(rep.satisfaction || '').toString().replace(/"/g, '""')}"`,
+        `"${(rep.comments || '').toString().replace(/"/g, '""')}"`,
+        `"${(rep.referrals || '').toString().replace(/"/g, '""')}"`,
+        `"${(rep.createdAt || '').toString().replace(/"/g, '""')}"`
       ].join(';');
       csvContent += line + '\n';
     });
@@ -80,43 +164,64 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
     showToast('Planilha de relatórios exportada com sucesso!', 'success');
   };
 
-  // Generate beautiful simulated standalone printable report window / PDF drafting
-  const handleDownloadSingleReport = (rep: VisitReport) => {
+  // Generate beautiful simulated standalone consolidated general report window / PDF
+  const handleDownloadGeneralReport = () => {
+    if (filteredReports.length === 0) {
+      showToast('Nenhum relatório técnico para compilar.', 'error');
+      return;
+    }
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       showToast('Erro ao abrir janela de impressão. Certifique-se de que os popups estão ativados.', 'error');
       return;
     }
 
+    // Compute simple metrics for summary
+    const totalReports = filteredReports.length;
+    const avgPunctuality = (filteredReports.reduce((sum, r) => sum + r.punctuality, 0) / totalReports).toFixed(1);
+    const avgCommunication = (filteredReports.reduce((sum, r) => sum + r.communication, 0) / totalReports).toFixed(1);
+
+    const moscasCount = filteredReports.filter(r => r.pests.moscas === 'realizado').length;
+    const baratasCount = filteredReports.filter(r => r.pests.baratas === 'realizado').length;
+    const ratosCount = filteredReports.filter(r => r.pests.ratos === 'realizado').length;
+    const formigasCount = filteredReports.filter(r => r.pests.formigas === 'realizado').length;
+
     const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>AGRESTE - Relatório de Atendimento: ${rep.clientName}</title>
+        <title>AGRESTE - Relatório Consolidado Geral</title>
         <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #18181b; line-height: 1.6; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #18181b; line-height: 1.5; background: #fff; }
           .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #D35400; padding-bottom: 20px; margin-bottom: 30px; }
           .logo-text { font-size: 32px; font-weight: bold; color: #D35400; letter-spacing: -0.025em; }
           .slogan { font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: #71717a; margin-top: 2px; }
           .title { text-align: right; font-size: 14px; font-family: monospace; color: #52525b; }
-          .card { border: 1px solid #e4e4e7; border-radius: 12px; padding: 24px; background: #fafafa; margin-bottom: 20px; }
-          .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
-          .info-block { font-size: 13px; }
-          .info-label { font-weight: bold; text-transform: uppercase; font-size: 10px; color: #71717a; display: block; margin-bottom: 4px; }
-          .info-val { font-size: 14px; color: #18181b; font-weight: 500; }
-          .table { width: 100%; border-collapse: collapse; margin: 25px 0; }
-          .table th { background: #D35400; color: white; text-align: left; font-size: 11px; text-transform: uppercase; padding: 12px; }
-          .table td { border-bottom: 1px solid #e4e4e7; padding: 12px; font-size: 13px; }
-          .badge { display: inline-block; padding: 4px 8px; font-size: 10px; font-weight: bold; text-transform: uppercase; border-radius: 4px; }
+          
+          .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; }
+          .metric-card { border: 1px solid #e4e4e7; border-radius: 8px; padding: 15px; background: #fafafa; text-align: center; }
+          .metric-val { font-size: 22px; font-weight: bold; color: #D35400; }
+          .metric-lbl { font-size: 10px; color: #71717a; text-transform: uppercase; margin-top: 4px; font-weight: bold; }
+          
+          .section-title { font-size: 16px; color: #D35400; border-bottom: 1px solid #e4e4e7; padding-bottom: 6px; margin-top: 30px; margin-bottom: 15px; text-transform: uppercase; }
+          
+          .table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 12px; }
+          .table th { background: #D35400; color: white; text-align: left; font-size: 10px; text-transform: uppercase; padding: 10px; }
+          .table td { border-bottom: 1px solid #e4e4e7; padding: 10px; }
+          
+          .badge { display: inline-block; padding: 2px 6px; font-size: 9px; font-weight: bold; text-transform: uppercase; border-radius: 4px; }
           .badge-realizado { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
           .badge-realizando { background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
           .badge-sem_necessidade { background: #f4f4f5; color: #3f3f46; border: 1px solid #e4e4e7; }
-          .ratings { border-top: 1px dashed #e4e4e7; padding-top: 15px; display: flex; gap: 30px; }
-          .note-box { font-size: 13px; background: #fff; border-left: 4px solid #D35400; padding: 12px; border-radius: 0 8px 8px 0; margin-bottom: 12px; }
-          .signature-box { margin-top: 50px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; text-align: center; font-size: 12px; }
-          .signature-line { border-top: 1px solid #a1a1aa; margin-top: 40px; padding-top: 8px; color: #71717a; }
-          .footer { text-align: center; font-size: 10px; color: #a1a1aa; margin-top: 40px; border-top: 1px solid #f4f4f5; padding-top: 20px; }
-          @media print { body { padding: 0; } .card { border: none; background: transparent; padding: 0; } }
+          
+          .note-box { font-size: 12px; background: #fafafa; border-left: 3px solid #D35400; padding: 10px; border-radius: 0 6px 6px 0; margin-bottom: 10px; border-top: 1px solid #e4e4e7; border-right: 1px solid #e4e4e7; border-bottom: 1px solid #e4e4e7; }
+          .log-entry { margin-bottom: 20px; page-break-inside: avoid; }
+          .log-header { font-size: 13px; font-weight: bold; color: #18181b; margin-bottom: 6px; }
+          
+          .footer { text-align: center; font-size: 10px; color: #a1a1aa; margin-top: 50px; border-top: 1px solid #f4f4f5; padding-top: 20px; page-break-inside: avoid; }
+          
+          @media print { body { padding: 0; } .metric-card { background: transparent; } }
         </style>
       </head>
       <body>
@@ -126,105 +231,91 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
             <div class="slogan">saúde ambiental</div>
           </div>
           <div class="title">
-            <strong>RELATÓRIO TÉCNICO DE VISITA</strong><br>
-            CÓD: ${rep.id} <br>
-            Emissão: ${new Date(rep.createdAt).toLocaleDateString('pt-BR')}
+            <strong>RELATÓRIO CONSOLIDADO DOS ATENDIMENTOS</strong><br>
+            Filtro Ativo: ${filteredReports.length} registro(s)<br>
+            Emissão: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}
           </div>
         </div>
 
-        <div class="card">
-          <h3 style="margin-top: 0; color: #D35400; font-size: 16px; border-bottom: 1px solid #e4e4e7; padding-bottom: 8px;">DADOS DO ATENDIMENTO</h3>
-          <div class="grid">
-            <div class="info-block">
-              <span class="info-label">Cliente / Tomador</span>
-              <span class="info-val">${rep.clientName}</span>
-            </div>
-            <div class="info-block">
-              <span class="info-label">Cidade de Execução</span>
-              <span class="info-val">${rep.clientCity}</span>
-            </div>
-            <div class="info-block">
-              <span class="info-label">Técnico Operacional Responsável</span>
-              <span class="info-val">${rep.techName}</span>
-            </div>
-            <div class="info-block">
-              <span class="info-label">Data da Aplicação / Mês</span>
-              <span class="info-val">${rep.date} (${rep.month})</span>
-            </div>
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-val">${totalReports}</div>
+            <div class="metric-lbl">Total Visitas</div>
           </div>
-
-          <div class="ratings">
-            <div class="info-block">
-              <span class="info-label">Pontualidade Técnico</span>
-              <span class="info-val" style="color: #D35400; font-weight: bold;">${rep.punctuality} / 10</span>
-            </div>
-            <div class="info-block">
-              <span class="info-label">Comunicação e Postura</span>
-              <span class="info-val" style="color: #D35400; font-weight: bold;">${rep.communication} / 10</span>
-            </div>
-            <div class="info-block">
-              <span class="info-label">Satisfação Declarada</span>
-              <span class="info-val" style="color: #059669; font-weight: bold;">${rep.satisfaction}</span>
-            </div>
+          <div class="metric-card">
+            <div class="metric-val">${avgPunctuality} / 10</div>
+            <div class="metric-lbl">Pontualidade Média</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-val">${avgCommunication} / 10</div>
+            <div class="metric-lbl">Comunicação Média</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-val">${moscasCount + baratasCount + ratosCount + formigasCount}</div>
+            <div class="metric-lbl">Ações Pragas</div>
           </div>
         </div>
 
-        <h3 style="color: #D35400; font-size: 16px; margin-top: 30px;">TRATAMENTO DE CONTROLE DE VETORES E PRAGAS</h3>
+        <div class="section-title">Resumo da Planilha de Atendimento</div>
         <table class="table">
           <thead>
             <tr>
-              <th>Alvo Praga</th>
-              <th>Metodologia / Status da Aplicação</th>
+              <th>ID</th>
+              <th>Data</th>
+              <th>Cliente / Razão</th>
+              <th>Cidade</th>
+              <th>Técnico</th>
+              <th>Satisfação</th>
+              <th>Moscas</th>
+              <th>Baratas</th>
+              <th>Rato</th>
+              <th>Formiga</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td><strong>Moscas (Insetos Voadores)</strong></td>
-              <td><span class="badge badge-${rep.pests.moscas}">${rep.pests.moscas === 'sem_necessidade' ? 'Inativo' : rep.pests.moscas === 'realizando' ? 'Em Ação' : 'Concluído'}</span></td>
-            </tr>
-            <tr>
-              <td><strong>Baratas (Blatofobia)</strong></td>
-              <td><span class="badge badge-${rep.pests.baratas}">${rep.pests.baratas === 'sem_necessidade' ? 'Inativo' : rep.pests.baratas === 'realizando' ? 'Em Ação' : 'Concluído'}</span></td>
-            </tr>
-            <tr>
-              <td><strong>Desratização (Roedores)</strong></td>
-              <td><span class="badge badge-${rep.pests.ratos}">${rep.pests.ratos === 'sem_necessidade' ? 'Inativo' : rep.pests.ratos === 'realizando' ? 'Em Ação' : 'Concluído'}</span></td>
-            </tr>
-            <tr>
-              <td><strong>Desinsetização (Formigas)</strong></td>
-              <td><span class="badge badge-${rep.pests.formigas}">${rep.pests.formigas === 'sem_necessidade' ? 'Inativo' : rep.pests.formigas === 'realizando' ? 'Em Ação' : 'Concluído'}</span></td>
-            </tr>
+            ${filteredReports.map(rep => `
+              <tr>
+                <td><strong>${rep.id.split('-')[1]?.toUpperCase() || rep.id.substring(0, 4).toUpperCase()}</strong></td>
+                <td>${rep.date}</td>
+                <td><strong>${rep.clientName}</strong></td>
+                <td>${rep.clientCity}</td>
+                <td>${rep.techName}</td>
+                <td style="font-weight: 500; color: #059669;">${rep.satisfaction || 'Excelente'}</td>
+                <td><span class="badge badge-${rep.pests.moscas}">${rep.pests.moscas === 'sem_necessidade' ? 'Inat.' : rep.pests.moscas === 'realizando' ? 'And.' : 'Concl.'}</span></td>
+                <td><span class="badge badge-${rep.pests.baratas}">${rep.pests.baratas === 'sem_necessidade' ? 'Inat.' : rep.pests.baratas === 'realizando' ? 'And.' : 'Concl.'}</span></td>
+                <td><span class="badge badge-${rep.pests.ratos}">${rep.pests.ratos === 'sem_necessidade' ? 'Inat.' : rep.pests.ratos === 'realizando' ? 'And.' : 'Concl.'}</span></td>
+                <td><span class="badge badge-${rep.pests.formigas}">${rep.pests.formigas === 'sem_necessidade' ? 'Inat.' : rep.pests.formigas === 'realizando' ? 'And.' : 'Concl.'}</span></td>
+              </tr>
+            `).join('')}
           </tbody>
         </table>
 
-        ${rep.recommendations ? `
-          <h3 style="color: #D35400; font-size: 15px; margin-top: 25px;">RECOMENDAÇÕES AMBIENTAIS E HIGIÊNICAS AO CLIENTE</h3>
-          <div class="note-box">${rep.recommendations}</div>
-        ` : ''}
-
-        ${rep.comments ? `
-          <h3 style="color: #D35400; font-size: 15px; margin-top: 25px;">SOLICITAÇÕES, RECLAMAÇÕES E COMENTÁRIOS DO CLIENTE</h3>
-          <div class="note-box">${rep.comments}</div>
-        ` : ''}
-
-        ${rep.referrals ? `
-          <p style="font-size: 12px; margin-top: 20px; color: #4b5563;">
-            🎁 <strong>Indicações de prospects feitas pelo cliente:</strong> ${rep.referrals}
-          </p>
-        ` : ''}
-
-        <div class="signature-box">
-          <div>
-            <div class="signature-line">Assinatura Digital Técnico Responsável</div>
-          </div>
-          <div>
-            <div class="signature-line">Assinatura do Cliente / Preposto de Confiança</div>
-          </div>
+        <div class="section-title" style="page-break-before: always;">Observações detalhadas dos atendimentos</div>
+        <div style="margin-top: 15px;">
+          ${filteredReports.map(rep => `
+            ${rep.recommendations || rep.comments ? `
+              <div class="log-entry">
+                <div class="log-header">${rep.date} - ${rep.clientName} (${rep.clientCity}) — Técnico: ${rep.techName}</div>
+                ${rep.recommendations ? `
+                  <div class="note-box">
+                    <strong>OBSERVAÇÕES DO RELATÓRIO:</strong><br>
+                    ${rep.recommendations}
+                  </div>
+                ` : ''}
+                ${rep.comments ? `
+                  <div class="note-box" style="border-left-color: #71717a;">
+                    <strong>SOLICITAÇÕES E PARECERES ADICIONAIS:</strong><br>
+                    ${rep.comments}
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
+          `).join('')}
         </div>
 
         <div class="footer">
           AGRESTE - Saúde Ambiental • Controle de Pragas de Alta Performance • Recife, Caruaru, Garanhuns.<br>
-          <i>Este documento é um comprovante oficial de vistoria técnica ambiental em conformidade com as exigências sanitárias brasileiras vigentes.</i>
+          <i>Este documento é um consolidado oficial exportado da plataforma de vistorias técnicas AGRESTE.</i>
         </div>
 
         <script>
@@ -237,8 +328,7 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
     printWindow.document.open();
     printWindow.document.write(htmlContent);
     printWindow.document.close();
-
-    showToast(`Relatório para ${rep.clientName} preparado para PDF.`, 'success');
+    showToast('Relatório geral compilado e preparado para PDF.', 'success');
   };
 
   // Reset filtering options
@@ -287,13 +377,22 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
             Lista indexada de registros diários para auditorias, fiscalizações e laudos fitossanitários de desinsetização.
           </p>
         </div>
-        <button
-          onClick={handleExportExcel}
-          id="export-reports-btn"
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-600/10 cursor-pointer hover:scale-[1.01] transition-transform duration-100"
-        >
-          <Download className="w-4 h-4" /> Exportar Planilha Excel
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={handleDownloadGeneralReport}
+            id="download-general-reports-pdf"
+            className="flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-orange-600/10 cursor-pointer hover:scale-[1.01] transition-transform duration-105"
+          >
+            <FileText className="w-4 h-4" /> Relatório Geral (PDF)
+          </button>
+          <button
+            onClick={handleExportExcel}
+            id="export-reports-btn"
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-600/10 cursor-pointer hover:scale-[1.01] transition-transform duration-100"
+          >
+            <Download className="w-4 h-4" /> Exportar Planilha Excel
+          </button>
+        </div>
       </div>
 
       {/* Filters Form Panel */}
@@ -439,10 +538,22 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
                 <div className="flex items-center gap-2 self-end md:self-auto">
                   <button
                     onClick={() => setPreviewReport(rep)}
-                    id={`download-rep-${rep.id}`}
-                    className="px-3.5 py-2 bg-orange-600/10 hover:bg-[#D35400] border border-[#D35450]/30 text-[#D35400] hover:text-white font-semibold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                    id={`preview-rep-${rep.id}`}
+                    className="px-3 py-2 bg-zinc-800/80 hover:bg-zinc-700/80 border border-zinc-700 text-zinc-350 hover:text-white font-semibold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                    title="Visualizar Relatório"
                   >
-                    <Download className="w-4 h-4" /> Baixar PDF
+                    <Eye className="w-3.5 h-3.5" /> Visualizar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPreviewReport(rep);
+                      setShouldAutoPrint(true);
+                    }}
+                    id={`download-rep-${rep.id}`}
+                    className="px-3 py-2 bg-orange-600/10 hover:bg-[#D35400] border border-orange-500/20 text-[#D35400] hover:text-white font-semibold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                    title="Baixar PDF"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Baixar PDF
                   </button>
                   {canEdit && (
                     <button
@@ -544,6 +655,17 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
               {/* Dynamic CSS styles loaded to force only the report element printable */}
               <style dangerouslySetInnerHTML={{__html: `
                 @media print {
+                  html, body, #root, #root > div, main, .fixed, .absolute, .overflow-y-auto {
+                    position: static !important;
+                    height: auto !important;
+                    min-height: 0 !important;
+                    max-height: none !important;
+                    overflow: visible !important;
+                    display: block !important;
+                    flex: none !important;
+                    grid: none !important;
+                    box-shadow: none !important;
+                  }
                   body * {
                     visibility: hidden !important;
                   }
@@ -556,6 +678,8 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
                     top: 0 !important;
                     width: 100% !important;
                     height: auto !important;
+                    max-height: none !important;
+                    overflow: visible !important;
                     background: white !important;
                     color: black !important;
                     padding: 40px !important;
@@ -585,9 +709,7 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
                   </button>
                   <button
                     onClick={() => {
-                      setTimeout(() => {
-                        window.print();
-                      }, 50);
+                      handlePrintDocument(previewReport);
                     }}
                     className="px-5 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 cursor-pointer shadow-md shadow-orange-600/10 transition-colors"
                   >
@@ -708,7 +830,7 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
                 <div className="space-y-4 mb-8 text-left text-xs">
                   {previewReport.recommendations && (
                     <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-200/40">
-                      <h4 className="font-bold text-[#D35400] uppercase text-[9px] tracking-wider mb-1 font-sans">Recomendações e Diretrizes de Segurança</h4>
+                      <h4 className="font-bold text-[#D35400] uppercase text-[9px] tracking-wider mb-1 font-sans">Observações do Relatório</h4>
                       <p className="text-zinc-700 leading-relaxed font-sans">{previewReport.recommendations}</p>
                     </div>
                   )}
@@ -725,13 +847,13 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
                 <div className="grid grid-cols-2 gap-8 pt-10 border-t border-dashed border-zinc-200 mt-8">
                   <div className="text-center">
                     <div className="w-48 h-px bg-zinc-400 mx-auto mb-2" />
-                    <p className="text-xs font-bold text-zinc-800">Técnico: {previewReport.techName}</p>
+                    <p className="text-xs font-bold text-zinc-800">Gerente / Supervisor de Operações</p>
                     <p className="text-[10px] text-zinc-400 font-semibold font-display">AGRESTE Saúde Ambiental</p>
                   </div>
                   <div className="text-center">
                     <div className="w-48 h-px bg-zinc-400 mx-auto mb-2" />
-                    <p className="text-xs font-bold text-zinc-800">Tomador / Favorecido</p>
-                    <p className="text-[10px] text-zinc-400 font-semibold">Vigilância Autorizada</p>
+                    <p className="text-xs font-bold text-zinc-800">{previewReport.clientName}</p>
+                    <p className="text-[10px] text-zinc-400 font-semibold">Cliente</p>
                   </div>
                 </div>
 

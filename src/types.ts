@@ -23,6 +23,7 @@ export interface SystemUserDetail {
   paymentValue: number;
   allowedTabs: string[];
   canEditData?: boolean;
+  cargo?: 'técnico' | 'gerente' | 'supervisor de operações';
 }
 
 export interface Client {

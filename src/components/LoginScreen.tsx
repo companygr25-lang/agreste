@@ -29,6 +29,7 @@ export default function LoginScreen({
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [cargo, setCargo] = useState<'técnico' | 'gerente' | 'supervisor de operações'>('técnico');
 
   // --- CLIENT STATES ---
   // Subview inside CLIENT: 'login' | 'register' | 'completing_profile'
@@ -70,7 +71,7 @@ export default function LoginScreen({
         return;
       }
 
-      const success = AGRESTE_DB.registerUser(username, password);
+      const success = AGRESTE_DB.registerUser(username, password, cargo);
       if (success) {
         showToast('Cadastro realizado com sucesso! Aguarde liberação do administrador.', 'success');
         setIsRegister(false);
@@ -391,27 +392,49 @@ export default function LoginScreen({
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="space-y-1"
+                className="space-y-3"
               >
-                <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
-                  Confirmar Senha
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                    <ShieldCheck className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    id="confirm-password-input"
-                    className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
+                    Confirmar Senha
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                      <ShieldCheck className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      id="confirm-password-input"
+                      className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                          : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
+                    Função / Cargo Operacional
+                  </label>
+                  <select
+                    value={cargo}
+                    onChange={(e) => setCargo(e.target.value as any)}
+                    id="cargo-select"
+                    className={`w-full py-2.5 px-3 rounded-xl border text-xs outline-none transition-all ${
                       theme === 'dark'
-                        ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                        ? 'bg-zinc-950 border-zinc-200 text-white focus:border-[#D35400]'
                         : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
                     }`}
-                  />
+                  >
+                    <option value="técnico" className={theme === 'dark' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}>Técnico</option>
+                    <option value="gerente" className={theme === 'dark' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}>Gerente</option>
+                    <option value="supervisor de operações" className={theme === 'dark' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}>Supervisor de Operações</option>
+                  </select>
                 </div>
               </motion.div>
             )}

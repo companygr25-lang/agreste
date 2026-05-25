@@ -171,7 +171,7 @@ export class AGRESTE_DB {
     this.set('licenses_limit', limit);
   }
 
-  static registerUser(username: string, pass: string): boolean {
+  static registerUser(username: string, pass: string, cargo?: 'técnico' | 'gerente' | 'supervisor de operações'): boolean {
     const users = this.getUsers();
     const normalized = username.toLowerCase().trim();
     if (users[normalized]) return false;
@@ -186,7 +186,8 @@ export class AGRESTE_DB {
       status: normalized === 'gil silva' ? 'approved' : 'pending',
       paymentStatus: 'pendente',
       paymentValue: 150,
-      allowedTabs: ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'perfil', 'configuracoes']
+      allowedTabs: ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'perfil', 'configuracoes'],
+      cargo: cargo || 'técnico'
     };
     this.saveUserDetails(details);
     return true;

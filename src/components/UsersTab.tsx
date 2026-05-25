@@ -33,6 +33,7 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
   const [editPaymentStatus, setEditPaymentStatus] = useState<'pago' | 'pendente'>('pendente');
   const [editPaymentValue, setEditPaymentValue] = useState<number>(150);
   const [editAllowedTabs, setEditAllowedTabs] = useState<string[]>([]);
+  const [editCargo, setEditCargo] = useState<'técnico' | 'gerente' | 'supervisor de operações'>('técnico');
   const [showEditConfirm, setShowEditConfirm] = useState<{ original: SystemUserDetail; updated: SystemUserDetail; newPassword?: string } | null>(null);
   
   const refreshUsers = () => {
@@ -130,6 +131,7 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
     setEditPaymentStatus(user.paymentStatus);
     setEditPaymentValue(user.paymentValue);
     setEditAllowedTabs(user.allowedTabs || []);
+    setEditCargo(user.cargo || 'técnico');
   };
 
   const handleToggleTabPermission = (tabId: string) => {
@@ -152,7 +154,8 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
       status: editStatus,
       paymentStatus: editPaymentStatus,
       paymentValue: editPaymentValue,
-      allowedTabs: editAllowedTabs
+      allowedTabs: editAllowedTabs,
+      cargo: editCargo
     };
 
     setShowEditConfirm({
@@ -330,7 +333,12 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
                     {user.name.charAt(0)}
                   </div>
                   <div>
-                    <h4 className="text-xs font-extrabold text-zinc-800 dark:text-zinc-100">{user.name}</h4>
+                    <h4 className="text-xs font-extrabold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
+                      {user.name}
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-wider bg-orange-600/10 text-orange-500 border border-orange-600/20">
+                        {user.cargo || 'técnico'}
+                      </span>
+                    </h4>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[10px] font-mono text-zinc-500">@{user.username}</span>
                       <span className="text-[10px] text-zinc-400">•</span>
@@ -638,6 +646,26 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
                       Pendente
                     </button>
                   </div>
+                </div>
+
+                {/* Função / Cargo Dropdown */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                    Função / Cargo Operacional *
+                  </label>
+                  <select
+                    value={editCargo}
+                    onChange={(e) => setEditCargo(e.target.value as any)}
+                    className={`w-full py-2 px-3 rounded-xl border text-xs outline-none transition-all ${
+                      theme === 'dark'
+                        ? 'bg-zinc-950 border-[#242424] text-zinc-300 focus:border-[#D35400]'
+                        : 'bg-white border-zinc-200 text-zinc-700 focus:border-[#D35400]'
+                    }`}
+                  >
+                    <option value="técnico">Técnico</option>
+                    <option value="gerente">Gerente</option>
+                    <option value="supervisor de operações">Supervisor de Operações</option>
+                  </select>
                 </div>
 
                 {/* Permissions checkboxes (Allowed tabs) */}
