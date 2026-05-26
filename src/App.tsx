@@ -20,6 +20,7 @@ import UsersTab from './components/UsersTab';
 import Toast from './components/Toast';
 import AgresteChat from './components/AgresteChat';
 import FloatingNotifications from './components/FloatingNotifications';
+import BillingTab from './components/BillingTab';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -289,6 +290,16 @@ export default function App() {
                   showToast={showToast}
                   onRefreshData={refreshAllData}
                   canEdit={canEditState}
+                />
+              )}
+
+              {activeTab === 'faturamento' && (
+                <BillingTab
+                  theme={theme}
+                  clients={clients}
+                  showToast={showToast}
+                  onRefreshData={refreshAllData}
+                  currentUser={currentUser}
                 />
               )}
 

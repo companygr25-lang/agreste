@@ -307,6 +307,7 @@ export default function SettingsTab({
                       { id: 'calendario', label: 'Calendário / Agenda' },
                       { id: 'relatorios', label: 'Laudos de Visitas' },
                       { id: 'documentacao', label: 'Documentação' },
+                      { id: 'faturamento', label: 'Faturamento & Cobranças' },
                       { id: 'perfil', label: 'Perfil do Operador' },
                       { id: 'configuracoes', label: 'Configurações Operador' },
                     ].map((tab) => {

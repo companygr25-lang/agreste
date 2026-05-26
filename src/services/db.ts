@@ -153,7 +153,7 @@ export class AGRESTE_DB {
         status: 'approved',
         paymentStatus: 'pago',
         paymentValue: 0,
-        allowedTabs: ['dashboard', 'usuarios', 'configuracoes']
+        allowedTabs: ['dashboard', 'usuarios', 'faturamento', 'configuracoes']
       }
     };
     return this.get<Record<string, SystemUserDetail>>('user_details', defaultDetails);
@@ -186,7 +186,7 @@ export class AGRESTE_DB {
       status: normalized === 'gil silva' ? 'approved' : 'pending',
       paymentStatus: 'pendente',
       paymentValue: 150,
-      allowedTabs: ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'perfil', 'configuracoes'],
+      allowedTabs: ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'faturamento', 'perfil', 'configuracoes'],
       cargo: cargo || 'técnico'
     };
     this.saveUserDetails(details);
@@ -205,7 +205,7 @@ export class AGRESTE_DB {
         status: 'approved',
         paymentStatus: 'pago',
         paymentValue: 0,
-        allowedTabs: ['dashboard', 'usuarios', 'configuracoes']
+        allowedTabs: ['dashboard', 'usuarios', 'faturamento', 'configuracoes']
       };
       this.saveUserDetails(details);
 
@@ -233,7 +233,7 @@ export class AGRESTE_DB {
         status: normalized === 'gil silva' ? 'approved' : 'pending',
         paymentStatus: 'pendente',
         paymentValue: 150,
-        allowedTabs: ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'perfil', 'configuracoes']
+        allowedTabs: ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'faturamento', 'perfil', 'configuracoes']
       };
       this.saveUserDetails(details);
       detail = details[normalized];
@@ -492,6 +492,36 @@ export class AGRESTE_DB {
 
   static saveNotifications(notifications: FloatingNotification[]): void {
     this.set('notifications', notifications);
+  }
+
+  static getPixKey(): string {
+    return this.get<string>('pix_key', 'agreste.saude.ambiental@pix.com');
+  }
+
+  static savePixKey(key: string): void {
+    this.set('pix_key', key);
+  }
+
+  static dismissNotificationForUser(id: string, username: string): void {
+    const notifications = this.getNotifications();
+    const index = notifications.findIndex(n => n.id === id);
+    if (index !== -1) {
+      const notif = notifications[index];
+      const lowerUser = username.toLowerCase().trim();
+      
+      if (notif.type === 'chat_request' && notif.targetTech?.toLowerCase().trim() === lowerUser) {
+        notif.status = 'dismissed';
+      }
+      
+      if (!notif.dismissedBy) {
+        notif.dismissedBy = [];
+      }
+      if (!notif.dismissedBy.includes(lowerUser)) {
+        notif.dismissedBy.push(lowerUser);
+      }
+      
+      this.saveNotifications(notifications);
+    }
   }
 
   static addNotification(notif: Omit<FloatingNotification, 'id' | 'createdAt' | 'status'>): FloatingNotification {

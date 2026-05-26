@@ -37,6 +37,8 @@ export interface Client {
   size: 'grande' | 'pequeno';
   createdAt: string;
   isPendingConfirmation?: boolean;
+  billingValue?: number;
+  dueDay?: number;
 }
 
 export interface PestControl {
@@ -131,4 +133,5 @@ export interface FloatingNotification {
   acceptedBy?: string; // which technician accepted this
   status: 'pending' | 'accepted' | 'dismissed';
   createdAt: string;
+  dismissedBy?: string[];
 }

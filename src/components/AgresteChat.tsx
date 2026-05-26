@@ -122,7 +122,7 @@ export default function AgresteChat({
 
   // Get active technicians list
   const userDetails = AGRESTE_DB.getUserDetails();
-  const technicians = Object.values(userDetails).filter(u => u.status === 'approved');
+  const technicians = Object.values(userDetails).filter(u => u.status === 'approved' && u.username.toLowerCase().trim() !== 'gil silva');
 
   // Send client message flow
   const handleClientSend = (textToSend: string) => {

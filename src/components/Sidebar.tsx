@@ -47,9 +47,25 @@ export default function Sidebar({
   const userDetails = AGRESTE_DB.getUserDetails();
   const currentDetails = userDetails[normalizedUser];
   const allowedTabs = [
-    ...(currentDetails?.allowedTabs || ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'perfil', 'configuracoes']),
-    'agreste-chat'
+    ...(currentDetails?.allowedTabs || ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'faturamento', 'perfil', 'configuracoes']),
   ];
+  
+  // Ensure faturamento is always present for all users
+  if (!allowedTabs.includes('faturamento')) {
+    allowedTabs.push('faturamento');
+  }
+  
+  if (normalizedUser !== 'gil silva') {
+    if (!allowedTabs.includes('agreste-chat')) {
+      allowedTabs.push('agreste-chat');
+    }
+  } else {
+    // Developers / Admins should keep layout completely clean from chats
+    const chatIndex = allowedTabs.indexOf('agreste-chat');
+    if (chatIndex !== -1) {
+      allowedTabs.splice(chatIndex, 1);
+    }
+  }
 
   const allMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <Building2 className="w-4.5 h-4.5" /> },
@@ -76,6 +92,7 @@ export default function Sidebar({
         </span>
       ) : null
     },
+    { id: 'faturamento', label: 'Faturamento', icon: <Landmark className="w-4.5 h-4.5" /> },
     { id: 'agreste-chat', label: 'Agreste Chat', icon: <MessageSquare className="w-4.5 h-4.5" /> },
     { id: 'perfil', label: 'Meu Perfil', icon: <User className="w-4.5 h-4.5" /> },
     { id: 'configuracoes', label: isProvider ? 'Configuração' : 'Configurações', icon: <Settings className="w-4.5 h-4.5" /> },

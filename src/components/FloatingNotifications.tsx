@@ -83,6 +83,9 @@ export default function FloatingNotifications({
   }, [notifications, currentUser, localDismissed]);
 
   const dismissLocally = (id: string) => {
+    // Save to user database record so it synchronizes and never shows up for this user on any device
+    AGRESTE_DB.dismissNotificationForUser(id, currentUser);
+
     const updated = [...localDismissed, id];
     setLocalDismissed(updated);
     try {
@@ -134,11 +137,14 @@ export default function FloatingNotifications({
     // 1. Filter out locally closed notifications
     if (localDismissed.includes(notif.id)) return false;
 
+    // Filter out if user dismissed it globally
+    const lowerUser = currentUser.toLowerCase().trim();
+    if (notif.dismissedBy?.includes(lowerUser)) return false;
+
     // 2. Filter out globally dismissed notifications
     if (notif.status === 'dismissed') return false;
 
     // 3. Match user types
-    const lowerUser = currentUser.toLowerCase().trim();
     if (notif.type === 'chat_request') {
       return notif.targetTech?.toLowerCase().trim() === lowerUser;
     }
