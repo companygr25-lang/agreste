@@ -20,6 +20,7 @@ export default function ProfileTab({ theme, profile, showToast, onRefreshData }:
   const [name, setName] = useState(profile.name);
   const [phone, setPhone] = useState(profile.phone);
   const [photoUrl, setPhotoUrl] = useState(profile.photoUrl);
+  const [cargo, setCargo] = useState(profile.cargo || '');
   
   // Simulated stats
   const completedReportsCount = AGRESTE_DB.getReports().filter(r => r.techName === profile.name || r.techName === name).length;
@@ -27,7 +28,7 @@ export default function ProfileTab({ theme, profile, showToast, onRefreshData }:
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim() || !phone.trim() || !photoUrl.trim()) {
+    if (!name.trim() || !phone.trim()) {
       showToast('Por favor, preencha todos os campos do perfil profissional.', 'error');
       return;
     }
@@ -38,6 +39,7 @@ export default function ProfileTab({ theme, profile, showToast, onRefreshData }:
       name,
       phone,
       photoUrl,
+      cargo,
     });
 
     showToast('Perfil profissional atualizado com sucesso!', 'success');
@@ -136,7 +138,7 @@ export default function ProfileTab({ theme, profile, showToast, onRefreshData }:
             </div>
             <div className="p-3 rounded-xl bg-zinc-950/20 border border-zinc-850/10">
               <span className="text-zinc-500 block">Papel</span>
-              <span className="text-xs font-bold text-zinc-300 dark:text-zinc-200 block mt-1.5 truncate">Sanitarista Chefe</span>
+              <span className="text-xs font-bold text-zinc-300 dark:text-zinc-200 block mt-1.5 truncate" title={cargo || 'Operador Técnico'}>{cargo || 'Operador Técnico'}</span>
             </div>
           </div>
         </div>
@@ -165,6 +167,27 @@ export default function ProfileTab({ theme, profile, showToast, onRefreshData }:
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Nome Fantasia do Técnico"
                   id="profile-name-input"
+                  className={`w-full py-2.5 pl-10 pr-4 rounded-xl border text-sm outline-none transition-all ${
+                    theme === 'dark' ? 'bg-zinc-950 border-[#242424] focus:border-[#D35400]' : 'bg-zinc-100 border-zinc-200'
+                  }`}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider mb-2 text-zinc-400">
+                Cargo / Função Profissional
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                  <Award className="w-4 h-4" />
+                </span>
+                <input
+                  type="text"
+                  value={cargo}
+                  onChange={(e) => setCargo(e.target.value)}
+                  placeholder="Ex: Gerente e Supervisor de Operações"
+                  id="profile-cargo-input"
                   className={`w-full py-2.5 pl-10 pr-4 rounded-xl border text-sm outline-none transition-all ${
                     theme === 'dark' ? 'bg-zinc-950 border-[#242424] focus:border-[#D35400]' : 'bg-zinc-100 border-zinc-200'
                   }`}

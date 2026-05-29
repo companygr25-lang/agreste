@@ -796,156 +796,530 @@ export default function BillingTab({
                 {/* Visual A4 Print Box */}
                 <div 
                   id="nf-output-print"
-                  className="bg-zinc-50 text-zinc-950 p-8 rounded-2xl border border-zinc-200 shadow-xl max-h-[60vh] overflow-y-auto"
+                  className="bg-white text-black p-4 md:p-6 rounded-xl border border-zinc-300 shadow-xl max-h-[60vh] overflow-y-auto"
                 >
-                  <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', color: '#1e293b', lineHeight: '1.5', fontSize: '12px' }}>
+                  {/* Outer design container replicating Garanhuns DANFSe v1.0 standard */}
+                  <div style={{
+                    fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                    color: '#000000',
+                    lineHeight: '1.25',
+                    fontSize: '9px',
+                    backgroundColor: '#ffffff',
+                    width: '100%',
+                    maxWidth: '800px',
+                    margin: '0 auto',
+                    boxSizing: 'border-box',
+                    padding: '0',
+                    textAlign: 'left',
+                    position: 'relative',
+                    userSelect: 'text'
+                  }}>
                     
-                    {/* Header bar */}
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', background: '#ffffff', padding: '16px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                    {/* Official Agreste Waterproof Watermark stamp in background */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%) rotate(-25deg)',
+                      opacity: 0.05,
+                      pointerEvents: 'none',
+                      zIndex: 0,
+                      width: '320px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <img 
+                        src="https://i.postimg.cc/W3fG6xMt/Whats-App-Image-2026-05-21-at-16-33-40.jpg" 
+                        alt="Watermark Agreste" 
+                        width="150"
+                        height="150"
+                        style={{ borderRadius: '50%', objectFit: 'cover' }}
+                        referrerPolicy="no-referrer"
+                      />
+                      <span style={{ fontSize: '24px', fontWeight: '900', color: '#000000', letterSpacing: '4px', marginTop: '10px' }}>AGRESTE</span>
+                      <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#000000', letterSpacing: '1px' }}>SAÚDE AMBIENTAL</span>
+                    </div>
+
+                    {/* Master Grid Frame starts here */}
+                    <div style={{ border: '2px solid #000000', width: '100%', boxSizing: 'border-box', position: 'relative', zIndex: 10, backgroundColor: 'transparent' }}>
+                      
+                      {/* HEADER ROW */}
+                      <div style={{ display: 'flex', borderBottom: '2.5px solid #000000', alignItems: 'stretch' }}>
+                        {/* Col 1: NFSe Logo */}
+                        <div style={{ flex: '1.2', borderRight: '1.5px solid #000000', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                          <span style={{ color: '#059669', fontSize: '25px', fontWeight: '900', letterSpacing: '-1.5px', fontFamily: 'sans-serif' }}>NFS-e</span>
+                          <div style={{ height: '24px', width: '1px', backgroundColor: '#e2e8f0' }} />
+                          <div style={{ fontSize: '6px', fontWeight: '800', color: '#000000', lineHeight: '1.1', textTransform: 'uppercase' }}>
+                            Nota Fiscal de<br />Serviço eletrônica
+                          </div>
+                        </div>
+                        {/* Col 2: DANFSe title */}
+                        <div style={{ flex: '1.5', borderRight: '1.5px solid #000000', padding: '6px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                          <strong style={{ fontSize: '12px', fontWeight: '900', color: '#000000', letterSpacing: '0.5px' }}>DANFSe v1.0</strong>
+                          <span style={{ fontSize: '10px', fontWeight: '700', color: '#000000', marginTop: '2px' }}>Documento Auxiliar da NFS-e</span>
+                        </div>
+                        {/* Col 3: Prefeitura Garanhuns */}
+                        <div style={{ flex: '1.6', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                          <svg width="34" height="38" viewBox="0 0 100 115" style={{ minWidth: '34px' }}>
+                            {/* 1. MURAL CROWN (COROA MURAL) - Gray/silver with masonry work */}
+                            <path d="M30 20 L70 20 L71 14 L65 14 L65 9 L59 9 L59 14 L53 14 L53 9 L47 9 L47 14 L41 14 L41 9 L35 9 L35 14 L29 14 Z" fill="#CCCCCC" stroke="#000000" strokeWidth="2.5" strokeLinejoin="miter" />
+                            {/* Masonry horizontal lines */}
+                            <line x1="30" y1="17" x2="70" y2="17" stroke="#000000" strokeWidth="1.5" />
+                            {/* Vertical slits/windows in the crown towers */}
+                            <line x1="32" y1="15" x2="32" y2="19" stroke="#000000" strokeWidth="1" />
+                            <line x1="38" y1="11" x2="38" y2="14" stroke="#000000" strokeWidth="1" />
+                            <line x1="44" y1="15" x2="44" y2="19" stroke="#000000" strokeWidth="1" />
+                            <line x1="50" y1="11" x2="50" y2="14" stroke="#000000" strokeWidth="1" />
+                            <line x1="56" y1="15" x2="56" y2="19" stroke="#000000" strokeWidth="1" />
+                            <line x1="62" y1="11" x2="62" y2="14" stroke="#000000" strokeWidth="1" />
+                            <line x1="68" y1="15" x2="68" y2="19" stroke="#000000" strokeWidth="1" />
+
+                            {/* 2. SHIELD (ESCUDO) */}
+                            {/* Outer boundary of shield */}
+                            <path d="M26 21 L74 21 L74 58 C74 81, 50 94, 50 94 C 50 94, 26 81, 26 58 Z" fill="#FFFFFF" stroke="#000000" strokeWidth="3" strokeLinejoin="round" />
+                            
+                            {/* Red base division (Wavy/Double Arch) */}
+                            {/* This path starts at point (26, 50) on the left of shield and draws double arches to (74, 50), then follows the base curve of shield */}
+                            <path d="M 26 50 C 34 38, 43 51, 50 43 C 57 51, 66 38, 74 50 L 74 58 C 74 81, 50 94, 50 94 C 50 94, 26 81, 26 58 Z" fill="#CC1111" stroke="#000000" strokeWidth="1.5" />
+
+                            {/* Three Silver circles inside the red section */}
+                            {/* Top left coin */}
+                            <circle cx="39" cy="62" r="4.5" fill="#FFFFFF" stroke="#000000" strokeWidth="1.5" />
+                            {/* Top right coin */}
+                            <circle cx="61" cy="62" r="4.5" fill="#FFFFFF" stroke="#000000" strokeWidth="1.5" />
+                            {/* Bottom coin */}
+                            <circle cx="50" cy="76" r="4.5" fill="#FFFFFF" stroke="#000000" strokeWidth="1.5" />
+
+                            {/* Three Eagles in the upper white section */}
+                            {/* Eagle 1 (Left, centered cx=38, cy=33) */}
+                            <path d="M 34 34 L 32 30 L 35 30 L 37 28 L 38 27 L 39 28 L 41 30 L 44 30 L 42 34 L 40 32 L 39 36 L 37 36 L 36 32 Z" fill="#000000" />
+                            {/* Eagle 2 (Center, centered cx=50, cy=33) */}
+                            <path d="M 46 34 L 44 30 L 47 30 L 49 28 L 50 27 L 51 28 L 53 30 L 56 30 L 54 34 L 52 32 L 51 36 L 49 36 L 48 32 Z" fill="#000000" />
+                            {/* Eagle 3 (Right, centered cx=62, cy=33) */}
+                            <path d="M 58 34 L 56 30 L 59 30 L 61 28 L 62 27 L 63 28 L 65 30 L 68 30 L 66 34 L 64 32 L 63 36 L 61 36 L 60 32 Z" fill="#000000" />
+
+                            {/* 3. SCROLL / RIBBON AT THE BOTTOM (Listão) with folds */}
+                            <path d="M 18 97 C 34 93, 66 93, 82 97 C 82 97, 85 104, 76 102 C 67 100, 33 100, 24 102 C 15 104, 18 97, 18 97 Z" fill="#CC1111" stroke="#000000" strokeWidth="1.5" />
+                            <path d="M 18 97 C 15 99, 12 101, 14 105 C 18 105, 20 102, 18 97 Z" fill="#880000" stroke="#000000" strokeWidth="1" />
+                            <path d="M 82 97 C 85 99, 88 101, 86 105 C 82 105, 80 102, 82 97 Z" fill="#880000" stroke="#000000" strokeWidth="1" />
+                          </svg>
+                          <div style={{ textAlign: 'left', lineHeight: '1.1' }}>
+                            <div style={{ fontSize: '8px', fontWeight: '900', color: '#000000' }}>PREFEITURA MUNICIPAL DE</div>
+                            <div style={{ fontSize: '11px', fontWeight: '950', color: '#000000' }}>GARANHUNS</div>
+                            <div style={{ fontSize: '7.5px', fontWeight: '700', color: '#374151' }}>SECRETARIA DA FAZENDA</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ACCESS KEY BAR */}
+                      <div style={{ borderBottom: '1.5px solid #000000', padding: '4px 6px' }}>
+                        <div style={{ fontSize: '7px', fontWeight: 'bold', color: '#4b5563' }}>Chave de Acesso da NFS-e</div>
+                        <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#000000', letterSpacing: '0.5px', fontFamily: 'monospace', marginTop: '2px' }}>
+                          2606002616736300010056000{String(nfNumber).padStart(9, '0')}6260341353
+                        </div>
+                      </div>
+
+                      {/* NFS-e NUMBERS & QR CODE BLOCK */}
+                      <div style={{ display: 'flex', borderBottom: '2.5px solid #000000', alignItems: 'stretch' }}>
+                        <div style={{ flex: '3', display: 'flex', flexDirection: 'column' }}>
+                          {/* Upper line */}
+                          <div style={{ display: 'flex', borderBottom: '1.5px solid #000000', flex: '1' }}>
+                            <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', fontWeight: 'bold', color: '#4b5563' }}>Número da NFS-e</div>
+                              <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#000000', marginTop: '1px' }}>{nfNumber}</div>
+                            </div>
+                            <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', fontWeight: 'bold', color: '#4b5563' }}>Competência da NFS-e</div>
+                              <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#000000', marginTop: '1px' }}>{new Date().toLocaleDateString('pt-BR')}</div>
+                            </div>
+                            <div style={{ flex: '1.5', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', fontWeight: 'bold', color: '#4b5563' }}>Data e Hora da emissão da NFS-e</div>
+                              <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#000000', marginTop: '1px' }}>{new Date().toLocaleDateString('pt-BR')} 11:55:14</div>
+                            </div>
+                          </div>
+                          {/* Lower line */}
+                          <div style={{ display: 'flex', flex: '1' }}>
+                            <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', fontWeight: 'bold', color: '#4b5563' }}>Número da DPS</div>
+                              <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#000000', marginTop: '1px' }}>2600000000{nfNumber}</div>
+                            </div>
+                            <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', fontWeight: 'bold', color: '#4b5563' }}>Série da DPS</div>
+                              <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#000000', marginTop: '1px' }}>9</div>
+                            </div>
+                            <div style={{ flex: '1.5', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', fontWeight: 'bold', color: '#4b5563' }}>Data e Hora da emissão da DPS</div>
+                              <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#000000', marginTop: '1px' }}>{new Date().toLocaleDateString('pt-BR')} 11:55:14</div>
+                            </div>
+                          </div>
+                        </div>
                         
-                        {/* Municipal emblem + Logo and branding */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                          <div style={{ position: 'relative' }}>
-                            <img 
-                              src="https://i.postimg.cc/W3fG6xMt/Whats-App-Image-2026-05-21-at-16-33-40.jpg" 
-                              alt="Logo Agreste" 
-                              width="56" 
-                              height="56" 
-                              style={{ borderRadius: '10px', objectFit: 'cover', border: '1px solid #f1f5f9' }}
-                              referrerPolicy="no-referrer"
-                            />
-                            <div style={{ position: 'absolute', bottom: '-4px', right: '-4px', width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '9px', fontWeight: 'bold', border: '2px solid white' }}>✓</div>
-                          </div>
-                          <div>
-                            <span style={{ fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', display: 'block' }}>REPUBLICA FEDERATIVA DO BRASIL</span>
-                            <strong style={{ fontSize: '13px', display: 'block', color: '#0f172a', fontWeight: '800' }}>PREFEITURA MUNICIPAL DE GARANHUNS</strong>
-                            <span style={{ fontSize: '11px', fontWeight: '600', display: 'block', color: '#475569' }}>Secretaria Municipal de Finanças e Arrecadação</span>
-                          </div>
-                        </div>
-
-                        {/* Title Badge and ID Pill */}
-                        <div style={{ textSelf: 'flex-end', textAlign: 'right', minWidth: '180px' }}>
-                          <div style={{ display: 'inline-block', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', fontSize: '9px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '9999px', marginBottom: '6px' }}>
-                            DOCUMENTO ELETRÔNICO VÁLIDO
-                          </div>
-                          <span style={{ display: 'block', fontSize: '10px', color: '#64748b' }}>NFS-e • NOTA FISCAL DE SERVIÇOS</span>
-                          <strong style={{ fontSize: '15px', color: '#D35400', display: 'block', fontWeight: '900', marginTop: '2px' }}>Nº {nfNumber}</strong>
-                        </div>
-
-                      </div>
-
-                      {/* Barcode-like validation line */}
-                      <div style={{ borderTop: '1px dashed #e2e8f0', marginTop: '12px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#64748b' }}>
-                        <span><strong>Código Verificador:</strong> {nfCode}</span>
-                        <span><strong>Data de Emissão:</strong> {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</span>
-                      </div>
-                    </div>
-
-                    {/* Master Flex / Two Column layout for Prestador and Tomador */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-                      
-                      {/* PRESTADOR DOS SERVIÇOS */}
-                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', background: '#ffffff', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.01)' }}>
-                        <div style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '6px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <div style={{ width: '6px', height: '12px', backgroundColor: '#D35400', borderRadius: '2px' }}></div>
-                          <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '0.05em', color: '#475569', textTransform: 'uppercase' }}>Prestador dos Serviços</span>
-                        </div>
-                        <strong style={{ fontSize: '12px', color: '#0f172a', display: 'block' }}>AGRESTE SAÚDE AMBIENTAL LTDA</strong>
-                        <span style={{ display: 'block', fontSize: '10px', color: '#475569', marginTop: '4px' }}><strong>CNPJ:</strong> 12.345.678/0001-90</span>
-                        <span style={{ display: 'block', fontSize: '10px', color: '#475569' }}><strong>Inscr. Municipal:</strong> 994025-1 | <strong>UF:</strong> PE</span>
-                        <span style={{ display: 'block', fontSize: '10px', color: '#64748b', marginTop: '4px' }}>Rua Vidal de Negreiros, 250, Centro<br />Garanhuns - PE • CEP: 55290-000</span>
-                      </div>
-
-                      {/* TOMADOR DOS SERVIÇOS */}
-                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', background: '#ffffff', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.01)' }}>
-                        <div style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '6px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <div style={{ width: '6px', height: '12px', backgroundColor: '#3b82f6', borderRadius: '2px' }}></div>
-                          <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '0.05em', color: '#475569', textTransform: 'uppercase' }}>Tomador de Serviços / Cliente</span>
-                        </div>
-                        <strong style={{ fontSize: '12px', color: '#0f172a', display: 'block' }}>{nfClient.name}</strong>
-                        <span style={{ display: 'block', fontSize: '10px', color: '#475569', marginTop: '4px' }}><strong>Responsável Técnico:</strong> {nfClient.responsible}</span>
-                        <span style={{ display: 'block', fontSize: '10px', color: '#475569' }}><strong>Cidade do Tomador:</strong> {nfClient.city} - PE</span>
-                        <span style={{ display: 'block', fontSize: '10px', color: '#64748b', marginTop: '4px' }}><strong>Contato cadastrado:</strong><br />{nfClient.phone || '(Seta de contato corporativo)'}</span>
-                      </div>
-
-                    </div>
-
-                    {/* DISCRIMINAÇÃO DOS SERVIÇOS */}
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', background: '#ffffff', padding: '16px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.01)' }}>
-                      <div style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '6px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ width: '6px', height: '12px', backgroundColor: '#8b5cf6', borderRadius: '2px' }}></div>
-                        <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '0.05em', color: '#475569', textTransform: 'uppercase' }}>Descrição Técnica dos Serviços Executados</span>
-                      </div>
-                      <div style={{ padding: '4px', fontSize: '11px', color: '#334155', lineHeight: '1.6', whiteSpace: 'pre-line', minHeight: '60px' }}>
-                        {nfServiceType}
-                      </div>
-                    </div>
-
-                    {/* IMPOSTOS E TRIBUTAÇÃO */}
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#ffffff', overflow: 'hidden', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.01)' }}>
-                      <div style={{ backgroundColor: '#f8fafc', padding: '10px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ width: '6px', height: '12px', backgroundColor: '#64748b', borderRadius: '2px' }}></div>
-                        <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '0.05em', color: '#475569', textTransform: 'uppercase' }}>Alíquotas e Retenções de Impostos</span>
-                      </div>
-                      
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', divideX: '1px solid #e2e8f0', textAlign: 'center' }}>
-                        <div style={{ padding: '12px', borderRight: '1px solid #f1f5f9' }}>
-                          <span style={{ fontSize: '8px', textTransform: 'uppercase', color: '#64748b', fontWeight: 'bold' }}>ISSQN Retido</span>
-                          <strong style={{ display: 'block', fontSize: '11px', color: '#0f172a', marginTop: '3px' }}>Isento / Não Retido</strong>
-                        </div>
-                        <div style={{ padding: '12px', borderRight: '1px solid #f1f5f9' }}>
-                          <span style={{ fontSize: '8px', textTransform: 'uppercase', color: '#64748b', fontWeight: 'bold' }}>Alíquota ISS (%)</span>
-                          <strong style={{ display: 'block', fontSize: '11px', color: '#0f172a', marginTop: '3px' }}>2.00%</strong>
-                        </div>
-                        <div style={{ padding: '12px', borderRight: '1px solid #f1f5f9' }}>
-                          <span style={{ fontSize: '8px', textTransform: 'uppercase', color: '#64748b', fontWeight: 'bold' }}>Retenção COFINS</span>
-                          <strong style={{ display: 'block', fontSize: '11px', color: '#64748b', marginTop: '3px' }}>R$ 0,00</strong>
-                        </div>
-                        <div style={{ padding: '12px' }}>
-                          <span style={{ fontSize: '8px', textTransform: 'uppercase', color: '#D35400', fontWeight: 'bold' }}>ISS do Município</span>
-                          <strong style={{ display: 'block', fontSize: '11px', color: '#D35400', marginTop: '3px' }}>R$ {(nfValue * 0.02).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* VALOR LIQUIDO / INTERACTIVE COMPONETS FOR IMMEDIATE PAYMENT */}
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', backgroundColor: '#fcfcfc', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-                      <div>
-                        <span style={{ fontSize: '9px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Valor Líquido do Documento / NFS-e</span>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '2.5px' }}>
-                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#0f172a' }}>R$</span>
-                          <strong style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.025em' }}>{nfValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
-                        </div>
-                      </div>
-
-                      {/* QRCODE block for smart instant PIX checkout */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: 'white', border: '1px solid #f1f5f9', padding: '10px 14px', borderRadius: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-                        <div style={{ textAlign: 'right' }}>
-                          <span style={{ fontSize: '8px', fontWeight: 'bold', color: '#16a34a', display: 'block' }}>⚡ COMUNICADO DE FISCALIZAÇÃO</span>
-                          <strong style={{ fontSize: '9px', display: 'block', color: '#0f172a', marginTop: '1.5px' }}>QR-CODE PIX CORPORATIVO</strong>
-                          <span style={{ fontSize: '8px', color: '#64748b', display: 'block' }}>Aponte a câmera para realizar adimplemento</span>
-                        </div>
-                        <div style={{ padding: '4px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        {/* Right side QR information cell */}
+                        <div style={{ flex: '1', borderLeft: '1.5px solid #000000', padding: '4px 6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=00020101021126480014br.gov.bcb.pix0126${pixKey}`}
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=00020101021126480014br.gov.bcb.pix0126${pixKey}`}
                             alt="QRCode Pix"
-                            width="60"
-                            height="60"
-                            style={{ objectFit: 'contain' }}
+                            width="50"
+                            height="50"
+                            style={{ objectFit: 'contain', border: '1px solid #cbd5e1', padding: '1px', borderRadius: '4px', backgroundColor: '#ffffff' }}
                             referrerPolicy="no-referrer"
                           />
+                          <div style={{ fontSize: '6px', color: '#4b5563', lineHeight: '1.15', textTransform: 'none' }}>
+                            A autenticidade desta NFS-e pode ser verificada pela leitura deste código QR ou pela consulta da chave de acesso no portal nacional da NFS-e
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Fiscal rules notes and warning */}
-                    <div style={{ borderTop: '1px dashed #cbd5e1', marginTop: '20px', paddingTop: '12px', textAlign: 'center' }}>
-                      <p style={{ fontSize: '8px', color: '#94a3b8', margin: 0, textTransform: 'uppercase', letterSpacing: '0.025em' }}>
-                        Nota emitida eletronicamente sob autorização legal de serviços fitossanitários • Agreste Saúde Ambiental
-                      </p>
-                    </div>
+                      {/* EMITENTE DA NFS-e ROW */}
+                      <div style={{ backgroundColor: '#f3f4f6', borderBottom: '1.5px solid #000000', padding: '3px 6px', fontWeight: '800', fontSize: '8px', color: '#000000', letterSpacing: '0.5px' }}>
+                        EMITENTE DA NFS-e
+                      </div>
+                      <div style={{ display: 'flex', borderBottom: '2.5px solid #000000', alignItems: 'stretch' }}>
+                        <div style={{ flex: '8', display: 'flex', flexDirection: 'column' }}>
+                          {/* Name and Basic Info Row */}
+                          <div style={{ display: 'flex', borderBottom: '1px solid #000000' }}>
+                            <div style={{ flex: '2', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Nome / Nome Empresarial</div>
+                              <div style={{ fontSize: '10px', fontWeight: '900', color: '#000000' }}>AGRESTE CONTROLE DE PRAGAS LTDA</div>
+                            </div>
+                            <div style={{ flex: '1.2', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>CNPJ / CPF / NIF</div>
+                              <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#000000' }}>26.167.363/0001-00</div>
+                            </div>
+                            <div style={{ flex: '0.8', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Inscrição Municipal</div>
+                              <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#000000' }}>3579581</div>
+                            </div>
+                            <div style={{ flex: '0.8', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Telefone</div>
+                              <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#000000' }}>3762-4267</div>
+                            </div>
+                          </div>
+                          {/* Address Row */}
+                          <div style={{ display: 'flex', borderBottom: '1px solid #000000' }}>
+                            <div style={{ flex: '2', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Endereço</div>
+                              <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>Rua Dr Jardim, , Santo Antônio</div>
+                            </div>
+                            <div style={{ flex: '1.2', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>E-mail</div>
+                              <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000', textTransform: 'lowercase' }}>sac@agrestededetizadora.com</div>
+                            </div>
+                            <div style={{ flex: '0.8', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Município</div>
+                              <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>Garanhuns - PE</div>
+                            </div>
+                            <div style={{ flex: '0.8', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>CEP</div>
+                              <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>55293-280</div>
+                            </div>
+                          </div>
+                          {/* Simples Nacional Row */}
+                          <div style={{ display: 'flex' }}>
+                            <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Simples Nacional na Data de Competência</div>
+                              <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>Não optante</div>
+                            </div>
+                            <div style={{ flex: '1', padding: '4px 6px' }}>
+                              <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Regime de Apuração Tributária pelo SN</div>
+                              <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Stamped Corporate Logo Section inside EMITENTE */}
+                        <div style={{ flex: '1.8', borderLeft: '1.5px solid #000000', padding: '4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fafafa', textAlign: 'center' }}>
+                          <img 
+                            src="https://i.postimg.cc/W3fG6xMt/Whats-App-Image-2026-05-21-at-16-33-40.jpg" 
+                            alt="Logo Emitente Agreste" 
+                            width="48" 
+                            height="48" 
+                            style={{ borderRadius: '6px', objectFit: 'cover', border: '1px solid #1e293b' }}
+                            referrerPolicy="no-referrer"
+                          />
+                          <div style={{ fontSize: '6px', fontWeight: '900', color: '#D35400', marginTop: '3px', letterSpacing: '0.3px' }}>AGRESTE</div>
+                          <div style={{ fontSize: '5px', color: '#6b7280', textTransform: 'lowercase' }}>registro nº 3579581</div>
+                        </div>
+                      </div>
 
+                      {/* TOMADOR DO SERVIÇO ROW */}
+                      <div style={{ backgroundColor: '#f3f4f6', borderBottom: '1.5px solid #000000', padding: '3px 6px', fontWeight: '800', fontSize: '8px', color: '#000000', letterSpacing: '0.5px' }}>
+                        TOMADOR DO SERVIÇO
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', borderBottom: '2.5px solid #000000' }}>
+                        {/* Row 1 */}
+                        <div style={{ display: 'flex', borderBottom: '1px solid #000000' }}>
+                          <div style={{ flex: '2', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Nome / Nome Empresarial</div>
+                            <div style={{ fontSize: '10px', fontWeight: '900', color: '#000000' }}>{nfClient.name}</div>
+                          </div>
+                          <div style={{ flex: '1.2', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>CNPJ / CPF / NIF</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#000000' }}>30.987.372/0001-14</div>
+                          </div>
+                          <div style={{ flex: '0.8', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Inscrição Municipal</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                          <div style={{ flex: '0.8', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Telefone</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#000000' }}>{nfClient.phone || '-'}</div>
+                          </div>
+                        </div>
+                        {/* Row 2 */}
+                        <div style={{ display: 'flex' }}>
+                          <div style={{ flex: '2', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Endereço</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>RUA PROJETADA 02, , NOVO HELIOPOLIS</div>
+                          </div>
+                          <div style={{ flex: '1.2', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>E-mail</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000', textTransform: 'lowercase' }}>{nfClient.email || 'sradm@hotmail.com'}</div>
+                          </div>
+                          <div style={{ flex: '0.8', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Município</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>{nfClient.city || 'Garanhuns'} - PE</div>
+                          </div>
+                          <div style={{ flex: '0.8', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>CEP</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>55297-130</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* INTERMEDIARIO DA NFS-E */}
+                      <div style={{ backgroundColor: '#fafafa', borderBottom: '2.5px solid #000000', padding: '4px 6px', textAlign: 'center', fontSize: '7.5px', fontWeight: 'bold', color: '#4b5563', letterSpacing: '0.3px' }}>
+                        INTERMEDIÁRIO DO SERVIÇO NÃO IDENTIFICADO NA NFS-e
+                      </div>
+
+                      {/* SERVIÇO PRESTADO ROW */}
+                      <div style={{ backgroundColor: '#f3f4f6', borderBottom: '1.5px solid #000000', padding: '3px 6px', fontWeight: '800', fontSize: '8px', color: '#000000', letterSpacing: '0.5px' }}>
+                        SERVIÇO PRESTADO
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', borderBottom: '2.5px solid #000000' }}>
+                        <div style={{ display: 'flex', borderBottom: '1px solid #000000' }}>
+                          <div style={{ flex: '2', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Código de Tributação Nacional</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>07.13.01 - Dedetização, desinfecção, desinsetização, imunização, higienização,</div>
+                          </div>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Código de Tributação Municipal</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Local da Prestação</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>{nfClient.city.toUpperCase() || 'GARANHUNS'} - PE</div>
+                          </div>
+                          <div style={{ flex: '0.8', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>País da Prestação</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                        </div>
+                        <div style={{ padding: '6px', minHeight: '45px' }}>
+                          <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Descrição do serviço</div>
+                          <div style={{ fontSize: '9.5px', fontWeight: 'bold', color: '#000000', whiteSpace: 'pre-line', lineHeight: '1.35', marginTop: '2px' }}>
+                            {nfServiceType || 'CONTROLE DE PRAGAS'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* TRIBUTAÇÃO MUNICIPAL ROW */}
+                      <div style={{ backgroundColor: '#f3f4f6', borderBottom: '1.5px solid #000000', padding: '3px 6px', fontWeight: '800', fontSize: '8px', color: '#000000', letterSpacing: '0.5px' }}>
+                        TRIBUTAÇÃO MUNICIPAL
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', borderBottom: '2.5px solid #000000' }}>
+                        {/* Row 1 */}
+                        <div style={{ display: 'flex', borderBottom: '1px solid #000000' }}>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Tributação do ISSQN</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>Operação Tributável</div>
+                          </div>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>País Result. da Prestação do Serviço</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Município de Incidência do ISSQN</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>Garanhuns - PE</div>
+                          </div>
+                          <div style={{ flex: '1', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Regime Especial de Tributação</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>Nenhum</div>
+                          </div>
+                        </div>
+                        {/* Row 2 */}
+                        <div style={{ display: 'flex', borderBottom: '1px solid #000000' }}>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Tipo de Imunidade</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Suspensão da Exigibilidade do ISSQN</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>Não</div>
+                          </div>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Número Processo Suspensão</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                          <div style={{ flex: '1', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Benefício Municipal</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                        </div>
+                        {/* Row 3 */}
+                        <div style={{ display: 'flex', borderBottom: '1px solid #000000' }}>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Valor do Serviço</div>
+                            <div style={{ fontSize: '9.5px', fontWeight: 'bold', color: '#000000' }}>R$ {nfValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                          </div>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Desconto Incondicionado</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Total Deduções/Reduções</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                          <div style={{ flex: '1', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Cálculo do BM</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                        </div>
+                        {/* Row 4 */}
+                        <div style={{ display: 'flex' }}>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>BC ISSQN</div>
+                            <div style={{ fontSize: '9.5px', fontWeight: 'bold', color: '#000000' }}>R$ {nfValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                          </div>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Alíquota Aplicada</div>
+                            <div style={{ fontSize: '9.5px', fontWeight: 'bold', color: '#000000' }}>2,79 %</div>
+                          </div>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Retenção do ISSQN</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>Não Retido</div>
+                          </div>
+                          <div style={{ flex: '1', padding: '4px 6px', backgroundColor: '#fafafa' }}>
+                            <div style={{ fontSize: '7px', color: '#b91c1c', fontWeight: 'bold' }}>ISSQN Apurado</div>
+                            <div style={{ fontSize: '9.5px', fontWeight: '900', color: '#b91c1c' }}>R$ {(nfValue * 0.0279).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* TRIBUTAÇÃO FEDERAL ROW */}
+                      <div style={{ backgroundColor: '#f3f4f6', borderBottom: '1.5px solid #000000', padding: '3px 6px', fontWeight: '800', fontSize: '8px', color: '#000000', letterSpacing: '0.5px' }}>
+                        TRIBUTAÇÃO FEDERAL
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', borderBottom: '2.5px solid #000000' }}>
+                        {/* Row 1 */}
+                        <div style={{ display: 'flex', borderBottom: '1px solid #000000' }}>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>IRRF</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                          <div style={{ flex: '1.2', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Contribuição Previdenciária - Retida</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                          <div style={{ flex: '1.2', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Contribuições Sociais - Retidas</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                          <div style={{ flex: '1.2', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Descrição Contrib. Sociais - Retidas</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>R$ 0,00</div>
+                          </div>
+                        </div>
+                        {/* Row 2 */}
+                        <div style={{ display: 'flex' }}>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>PIS - Débito Apuração Própria</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                          <div style={{ flex: '1', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>COFINS - Débito Apuração Própria</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* VALOR TOTAL DA NFS-E */}
+                      <div style={{ backgroundColor: '#f3f4f6', borderBottom: '1.5px solid #000000', padding: '3px 6px', fontWeight: '800', fontSize: '8px', color: '#000000', letterSpacing: '0.5px' }}>
+                        VALOR TOTAL DA NFS-E
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', borderBottom: '2.5px solid #000000' }}>
+                        {/* Row 1 */}
+                        <div style={{ display: 'flex', borderBottom: '1px solid #000000' }}>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Valor do Serviço</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#000000' }}>R$ {nfValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                          </div>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Desconto Condicionado</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Desconto Incondicionado</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>-</div>
+                          </div>
+                          <div style={{ flex: '1', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>ISSQN Retido</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>Não Retido</div>
+                          </div>
+                        </div>
+                        {/* Row 2 */}
+                        <div style={{ display: 'flex' }}>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Total das Retenções Federais</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>R$ 0,00</div>
+                          </div>
+                          <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>PIS/COFINS Retidos</div>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000' }}>R$ 0,00</div>
+                          </div>
+                          <div style={{ flex: '1.2', padding: '4px 6px', backgroundColor: '#edfcf2' }}>
+                            <div style={{ fontSize: '8px', color: '#059669', fontWeight: 'bold' }}>Valor Líquido da NFS-e</div>
+                            <div style={{ fontSize: '12px', fontWeight: '900', color: '#059669', marginTop: '1px' }}>R$ {nfValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* TOTAIS APROXIMADOS DOS TRIBUTOS */}
+                      <div style={{ backgroundColor: '#f3f4f6', borderBottom: '1.5px solid #000000', padding: '3px 6px', fontWeight: '800', fontSize: '8px', color: '#000000', letterSpacing: '0.5px' }}>
+                        TOTAIS APROXIMADOS DOS TRIBUTOS
+                      </div>
+                      <div style={{ display: 'flex', borderBottom: '2.5px solid #000000', alignItems: 'stretch' }}>
+                        <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Federais</div>
+                          <div style={{ fontSize: '9.5px', fontWeight: 'bold', color: '#000000', marginTop: '1px' }}>R$ 0,00</div>
+                        </div>
+                        <div style={{ flex: '1', borderRight: '1.5px solid #000000', padding: '4px 6px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Estaduais</div>
+                          <div style={{ fontSize: '9.5px', fontWeight: 'bold', color: '#000000', marginTop: '1px' }}>R$ 0,00</div>
+                        </div>
+                        <div style={{ flex: '1', padding: '4px 6px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '7px', color: '#4b5563', fontWeight: 'bold' }}>Municipais</div>
+                          <div style={{ fontSize: '9.5px', fontWeight: 'bold', color: '#000000', marginTop: '1px' }}>R$ {(nfValue * 0.0279).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                        </div>
+                      </div>
+
+                      {/* INFORMAÇÕES COMPLEMENTARES */}
+                      <div style={{ backgroundColor: '#f3f4f6', borderBottom: '1.5px solid #000000', padding: '3px 6px', fontWeight: '800', fontSize: '8px', color: '#000000', letterSpacing: '0.5px' }}>
+                        INFORMAÇÕES COMPLEMENTARES
+                      </div>
+                      <div style={{ padding: '6px', minHeight: '40px', fontSize: '8px', color: '#000000', lineHeight: '1.4', textTransform: 'none' }}>
+                        Nome: {nfClient.code || '26.167.363'} • Operador de Emissão: <strong>{(() => {
+                          const details = AGRESTE_DB.getUserDetails();
+                          const userObject = currentUser ? details[currentUser.toLowerCase().trim()] : null;
+                          return userObject?.name || AGRESTE_DB.getProfile().name || currentUser || 'Adriano Senna';
+                        })()}</strong> • Garanhuns - PE<br />
+                        Emissão de nota fiscal de serviços baseada inteiramente no Convênio de Autoconformidade Tributária Municipal de Garanhuns sob Decreto Fiscal Nacional.<br />
+                        Prestação de serviço fitofarmacêutico e químico de desinsetização de alta eficiência da Agreste Saúde Ambiental.
+                      </div>
+
+                    </div>
                   </div>
                 </div>
 

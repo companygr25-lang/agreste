@@ -13,6 +13,7 @@ export interface UserProfile {
   name: string;
   phone: string;
   photoUrl: string;
+  cargo?: string;
 }
 
 export interface SystemUserDetail {

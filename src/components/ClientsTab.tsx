@@ -176,7 +176,7 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
   // Open visit report dialog and seed default technician name
   const openVisitModal = (client: Client) => {
     setShowVisitModal(client);
-    setTechName(AGRESTE_DB.getProfile().name || 'Sandro Sanitarista');
+    setTechName(AGRESTE_DB.getProfile().name || 'Adriano Senna');
     // resets control states
     setPests({
       moscas: 'sem_necessidade',

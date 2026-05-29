@@ -6,7 +6,7 @@
 import React from 'react';
 import { 
   Building2, Users, Calendar, FileText, FileCheck, 
-  Settings, User, LogOut, Sun, Moon, Sparkles, Clock, Landmark, MessageSquare
+  Settings, User, LogOut, Sun, Moon, Sparkles, Clock, Landmark, MessageSquare, BookOpen
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Client, CompanyDocument, UserProfile } from '../types';
@@ -54,6 +54,11 @@ export default function Sidebar({
   if (!allowedTabs.includes('faturamento')) {
     allowedTabs.push('faturamento');
   }
+
+  // Ensure controles is always present for all users as a technical guide
+  if (!allowedTabs.includes('controles')) {
+    allowedTabs.push('controles');
+  }
   
   if (normalizedUser !== 'gil silva') {
     if (!allowedTabs.includes('agreste-chat')) {
@@ -93,6 +98,7 @@ export default function Sidebar({
       ) : null
     },
     { id: 'faturamento', label: 'Faturamento', icon: <Landmark className="w-4.5 h-4.5" /> },
+    { id: 'controles', label: 'Tipos de Controles', icon: <BookOpen className="w-4.5 h-4.5" /> },
     { id: 'agreste-chat', label: 'Agreste Chat', icon: <MessageSquare className="w-4.5 h-4.5" /> },
     { id: 'perfil', label: 'Meu Perfil', icon: <User className="w-4.5 h-4.5" /> },
     { id: 'configuracoes', label: isProvider ? 'Configuração' : 'Configurações', icon: <Settings className="w-4.5 h-4.5" /> },
@@ -173,7 +179,7 @@ export default function Sidebar({
             />
             <div className="truncate text-left w-full pr-2">
               <p className="text-xs font-bold text-zinc-300 dark:text-zinc-100 truncate">{profile.name}</p>
-              <p className="text-[10px] text-zinc-500 truncate font-mono">{profile.phone}</p>
+              <p className="text-[10px] text-[#D35400] truncate font-medium">{profile.cargo || 'Operador Técnico'}</p>
             </div>
           </div>
 
@@ -255,7 +261,7 @@ export default function Sidebar({
                   )}
                 </div>
                 <span className="text-[9px] mt-1 tracking-tighter truncate max-w-[65px] block font-semibold">
-                  {item.id === 'dashboard' ? 'Dash' : item.id === 'clientes' ? 'Clientes' : item.id === 'calendario' ? 'Agenda' : item.id === 'relatorios' ? 'Laudos' : item.id === 'agreste-chat' ? 'Chat' : 'Docs'}
+                  {item.id === 'dashboard' ? 'Dash' : item.id === 'clientes' ? 'Clientes' : item.id === 'calendario' ? 'Agenda' : item.id === 'relatorios' ? 'Laudos' : item.id === 'agreste-chat' ? 'Chat' : item.id === 'controles' ? 'Controle' : 'Docs'}
                 </span>
               </button>
             );

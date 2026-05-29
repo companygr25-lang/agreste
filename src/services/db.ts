@@ -17,8 +17,9 @@ const SEED_PROFILE: UserProfile = {
   id: 'usr-1',
   username: 'adriano senna',
   name: 'Adriano Senna',
-  phone: '(81) 99876-5432',
+  phone: '',
   photoUrl: '', // Will be added from gallery/bucket
+  cargo: 'Gerente e Supervisor de Operações'
 };
 
 export class AGRESTE_DB {
@@ -252,7 +253,8 @@ export class AGRESTE_DB {
 
   // --- Clients CRUD ---
   static getClients(): Client[] {
-    return this.get<Client[]>('clients', SEED_CLIENTS);
+    const clients = this.get<Client[]>('clients', SEED_CLIENTS);
+    return [...clients].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR', { sensitivity: 'base' }));
   }
 
   static addClient(client: Omit<Client, 'id' | 'createdAt' | 'code'>): Client {
@@ -451,10 +453,52 @@ export class AGRESTE_DB {
 
   // --- Profile ---
   static getProfile(): UserProfile {
-    return this.get<UserProfile>('profile', SEED_PROFILE);
+    const loggedUser = localStorage.getItem('agreste_logged_user');
+    if (loggedUser) {
+      const normalized = loggedUser.toLowerCase().trim();
+      const specificProfile = this.get<UserProfile | null>(`profile_${normalized}`, null);
+      if (specificProfile) {
+        if (normalized === 'adriano senna' && !specificProfile.cargo) {
+          specificProfile.cargo = 'Gerente e Supervisor de Operações';
+        }
+        return specificProfile;
+      }
+      
+      const details = this.getUserDetails();
+      const userDetail = details[normalized];
+      if (userDetail) {
+        return {
+          id: `usr-${normalized}`,
+          username: normalized,
+          name: userDetail.name || (normalized === 'adriano senna' ? 'Adriano Senna' : userDetail.username),
+          phone: '',
+          photoUrl: '',
+          cargo: normalized === 'adriano senna' ? 'Gerente e Supervisor de Operações' : (userDetail.cargo || 'Operador Técnico')
+        };
+      }
+    }
+    
+    const legacy = this.get<UserProfile | null>('profile', null);
+    if (legacy) {
+      if (loggedUser && loggedUser.toLowerCase().trim() === 'adriano senna') {
+        if (legacy.name === 'Sandro' || legacy.name === '' || !legacy.name) {
+          legacy.name = 'Adriano Senna';
+        }
+        if (!legacy.cargo) {
+          legacy.cargo = 'Gerente e Supervisor de Operações';
+        }
+      }
+      return legacy;
+    }
+    return SEED_PROFILE;
   }
 
   static updateProfile(profile: UserProfile): void {
+    const loggedUser = localStorage.getItem('agreste_logged_user');
+    if (loggedUser) {
+      const normalized = loggedUser.toLowerCase().trim();
+      this.set(`profile_${normalized}`, profile);
+    }
     this.set('profile', profile);
   }
 
