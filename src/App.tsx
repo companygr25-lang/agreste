@@ -222,7 +222,7 @@ export default function App() {
         />
 
         {/* Core Screen Container */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto pb-24 lg:pb-8" id="app-viewport">
+        <main className="flex-1 p-4 pr-4 py-4 pl-[80px] sm:p-6 sm:pl-[84px] lg:p-8 lg:pl-8 overflow-y-auto pb-8 lg:pb-8" id="app-viewport">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}

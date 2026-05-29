@@ -6,7 +6,8 @@
 import React from 'react';
 import { 
   Building2, Users, Calendar, FileText, FileCheck, 
-  Settings, User, LogOut, Sun, Moon, Sparkles, Clock, Landmark, MessageSquare, BookOpen
+  Settings, User, LogOut, Sun, Moon, Sparkles, Clock, Landmark, MessageSquare, BookOpen,
+  Menu, X
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Client, CompanyDocument, UserProfile } from '../types';
@@ -105,6 +106,7 @@ export default function Sidebar({
   ];
 
   const menuItems = allMenuItems.filter(item => allowedTabs.includes(item.id));
+  const [isMinimizedMobile, setIsMinimizedMobile] = React.useState(true);
 
   return (
     <>
@@ -193,80 +195,167 @@ export default function Sidebar({
         </div>
       </aside>
 
-      {/* MOBILE RESPONSIVE TOP NAV BAR + BOTTOM DRAWER STICKY */}
+      {/* MOBILE RESPONSIVE COLLAPSIBLE SIDEBAR */}
       <div className="lg:hidden shrink-0">
-        {/* TOP MOBILE BANNER */}
-        <header className={`sticky top-0 w-full z-20 border-b flex items-center justify-between px-4 py-3 ${
-          theme === 'dark' ? 'bg-[#141414] border-zinc-900 text-white' : 'bg-white border-zinc-200 text-zinc-900'
-        }`}>
-          <div className="flex items-center gap-2">
-            <img
-              referrerPolicy="no-referrer"
-              src={logoUrl}
-              alt="AGRESTE"
-              className="w-8 h-8 rounded-full object-cover"
-            />
-            <div>
-              <h1 className="text-md font-bold font-display text-[#D35400] leading-none">AGRESTE</h1>
-              <span className="text-[8px] font-extrabold font-mono tracking-wider text-zinc-400 dark:text-white/95 leading-none uppercase">saúde ambiental</span>
-            </div>
-          </div>
+        {/* Backdrop overlay when mobile sidebar is expanded */}
+        {!isMinimizedMobile && (
+          <div 
+            className="fixed inset-0 bg-black/65 backdrop-blur-xs z-35 transition-opacity duration-300"
+            onClick={() => setIsMinimizedMobile(true)}
+          />
+        )}
 
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setActiveTab('perfil')}
-              id="mobile-avatar-top-btn"
-              className="p-1"
-            >
-              <img
-                referrerPolicy="no-referrer"
-                src={profile.photoUrl || logoUrl}
-                alt={profile.name}
-                className="w-7.5 h-7.5 rounded-full object-cover border border-[#D35400]/30"
-              />
-            </button>
-            <button
-              onClick={onLogout}
-              id="mobile-logout-top-btn"
-              className="p-2 text-zinc-400 hover:text-red-500 cursor-pointer"
-              title="Logout"
-            >
-              <LogOut className="w-4.5 h-4.5" />
-            </button>
-          </div>
-        </header>
-
-        {/* BOTTOM NAV STICKY NAVIGATOR BAR */}
-        <nav className={`fixed bottom-0 left-0 right-0 z-30 border-t flex justify-around py-2 ${
-          theme === 'dark' ? 'bg-[#141414]/95 border-zinc-900 text-white backdrop-blur-md' : 'bg-white border-zinc-200 text-zinc-900'
-        }`}>
-          {menuItems.slice(0, 6).map((item) => {
-            const isActive = activeTab === item.id;
-            return (
+        <aside 
+          className={`fixed top-0 bottom-0 left-0 h-screen z-40 border-r flex flex-col transition-all duration-300 ease-in-out ${
+            isMinimizedMobile ? 'w-[64px]' : 'w-[250px]'
+          } ${
+            theme === 'dark' 
+              ? 'bg-[#141414] border-zinc-900 text-white' 
+              : 'bg-white border-zinc-200 text-zinc-900'
+          }`}
+        >
+          {/* Header containing Toggle/Minimize Trigger */}
+          <div className="p-3 border-b border-zinc-900/10 dark:border-zinc-900/40 flex items-center justify-between shrink-0 h-[64px]">
+            {isMinimizedMobile ? (
               <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                id={`mobile-nav-item-${item.id}`}
-                className={`flex flex-col items-center justify-center p-1 cursor-pointer transition-colors ${
-                  isActive ? 'text-[#D35400] font-bold' : 'text-zinc-500'
+                onClick={() => setIsMinimizedMobile(false)}
+                id="mobile-sidebar-expand-btn"
+                className="w-10 h-10 rounded-xl bg-zinc-950/25 border border-zinc-800/15 flex items-center justify-center text-[#D35400] hover:bg-zinc-900/30 mx-auto cursor-pointer"
+                title="Expandir Menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+            ) : (
+              <div className="flex items-center justify-between w-full h-full">
+                <div className="flex items-center gap-2">
+                  <img
+                    referrerPolicy="no-referrer"
+                    src={logoUrl}
+                    alt="AGRESTE"
+                    className="w-8 h-8 rounded-full object-cover border border-[#D35400]/40"
+                  />
+                  <div className="truncate">
+                    <h1 className="text-sm font-bold font-display text-[#D35400] leading-none">AGRESTE</h1>
+                    <span className="text-[7.5px] font-extrabold font-mono tracking-wider text-zinc-400 dark:text-white/95 leading-none uppercase mt-0.5 block">saúde ambiental</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsMinimizedMobile(true)}
+                  id="mobile-sidebar-minimize-btn"
+                  className="w-8 h-8 rounded-lg bg-zinc-950/20 text-zinc-400 hover:text-[#D35400] flex items-center justify-center cursor-pointer"
+                  title="Recolher Menu"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Core Vertical Scrolling List */}
+          <nav className="flex-1 p-2 py-3 space-y-1 overflow-y-auto scrollbar-none">
+            {menuItems.map((item) => {
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    setIsMinimizedMobile(true); // Auto collapse after select on mobile
+                  }}
+                  id={`mobile-sidebar-item-${item.id}`}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-100 cursor-pointer ${
+                    isMinimizedMobile ? 'justify-center' : 'justify-start'
+                  } ${
+                    isActive
+                      ? 'bg-[#D35400] text-white shadow-md shadow-[#D35400]/10'
+                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/40'
+                          .replace('hover:text-zinc-200 hover:bg-zinc-900/40', theme === 'light' ? 'hover:text-zinc-800 hover:bg-zinc-100' : 'hover:text-zinc-200 hover:bg-zinc-900/40')
+                  }`}
+                  title={item.label}
+                >
+                  <span className={`relative shrink-0 ${isActive ? 'text-white' : 'text-zinc-500'}`}>
+                    {item.icon}
+                    {/* Tiny badge indicator counts */}
+                    {isMinimizedMobile && item.id === 'clientes' && pendingPaymentsCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-600 text-white w-2.5 h-2.5 text-[7px] leading-none rounded-full flex items-center justify-center font-bold ring-2 ring-zinc-950">
+                        {pendingPaymentsCount}
+                      </span>
+                    )}
+                    {isMinimizedMobile && item.id === 'documentacao' && pendingDocsCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-amber-500 text-white w-2 h-2 rounded-full ring-2 ring-zinc-950" />
+                    )}
+                  </span>
+
+                  {!isMinimizedMobile && (
+                    <motion.span 
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="text-xs truncate text-left flex-1"
+                    >
+                      {item.label}
+                    </motion.span>
+                  )}
+
+                  {!isMinimizedMobile && item.badge}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Footer profile & logout triggers */}
+          <div className="p-3 border-t border-zinc-900/10 dark:border-zinc-900 space-y-3 shrink-0">
+            {isMinimizedMobile ? (
+              <button
+                onClick={() => {
+                  setActiveTab('perfil');
+                  setIsMinimizedMobile(true);
+                }}
+                className="w-10 h-10 rounded-full mx-auto block overflow-hidden border border-[#D35400]/30 cursor-pointer hover:border-[#D35400]"
+                title={`${profile.name} • ${profile.cargo || 'Operador Técnico'}`}
+              >
+                <img
+                  referrerPolicy="no-referrer"
+                  src={profile.photoUrl || logoUrl}
+                  alt={profile.name}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ) : (
+              <div 
+                onClick={() => {
+                  setActiveTab('perfil');
+                  setIsMinimizedMobile(true);
+                }}
+                className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer hover:bg-zinc-900/35 transition-all ${
+                  theme === 'light' ? 'hover:bg-zinc-100' : ''
                 }`}
               >
-                <div className="relative">
-                  {item.icon}
-                  {item.id === 'clientes' && pendingPaymentsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 text-[8px] leading-none bg-red-650 text-white w-2 h-2 rounded-full ring-2 ring-zinc-950 animate-ping"></span>
-                  )}
-                  {item.id === 'documentacao' && pendingDocsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 text-[8px] leading-none bg-amber-500 text-white w-2 h-2 rounded-full ring-2 ring-zinc-950"></span>
-                  )}
+                <img
+                  referrerPolicy="no-referrer"
+                  src={profile.photoUrl || logoUrl}
+                  alt={profile.name}
+                  className="w-9 h-9 rounded-full object-cover border border-[#D35400]/30"
+                />
+                <div className="truncate text-left w-full pr-1">
+                  <p className="text-xs font-bold text-zinc-300 dark:text-zinc-100 truncate">{profile.name}</p>
+                  <p className="text-[10px] text-[#D35400] truncate font-medium">{profile.cargo || 'Operador Técnico'}</p>
                 </div>
-                <span className="text-[9px] mt-1 tracking-tighter truncate max-w-[65px] block font-semibold">
-                  {item.id === 'dashboard' ? 'Dash' : item.id === 'clientes' ? 'Clientes' : item.id === 'calendario' ? 'Agenda' : item.id === 'relatorios' ? 'Laudos' : item.id === 'agreste-chat' ? 'Chat' : item.id === 'controles' ? 'Controle' : 'Docs'}
-                </span>
-              </button>
-            );
-          })}
-        </nav>
+              </div>
+            )}
+
+            <button
+              onClick={onLogout}
+              id="mobile-sidebar-logout-btn"
+              className={`w-full py-2 bg-zinc-950 hover:bg-zinc-900/50 hover:border-zinc-850 dark:hover:bg-zinc-900/60 border border-zinc-900 text-red-500 dark:text-red-400 font-bold rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
+                isMinimizedMobile ? 'px-0 text-[10px]' : 'gap-2 text-xs'
+              }`}
+              title="Sair do Painel"
+            >
+              <LogOut className="w-3.5 h-3.5" /> 
+              {!isMinimizedMobile && <span>Sair do Painel</span>}
+            </button>
+          </div>
+        </aside>
       </div>
     </>
   );
