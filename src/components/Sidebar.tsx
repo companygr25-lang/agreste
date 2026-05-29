@@ -197,62 +197,65 @@ export default function Sidebar({
 
       {/* MOBILE RESPONSIVE COLLAPSIBLE SIDEBAR */}
       <div className="lg:hidden shrink-0">
+        {/* Floating menu toggle button when sidebar is collapsed */}
+        {isMinimizedMobile && (
+          <button
+            onClick={() => setIsMinimizedMobile(false)}
+            id="mobile-floating-menu-trigger"
+            className="fixed top-4 left-4 z-30 w-11 h-11 rounded-xl flex items-center justify-center transition-all cursor-pointer shadow-lg border border-[#D35400]/25 bg-zinc-950/95 hover:bg-zinc-900 text-[#D35400] active:scale-95"
+            title="Abrir Menu"
+          >
+            <Menu className="w-5 h-5" />
+            {/* Notification badge */}
+            {(pendingPaymentsCount > 0 || pendingDocsCount > 0) && (
+              <span className="absolute -top-1 -right-1 bg-[#D35400] text-white w-2 h-2 rounded-full ring-2 ring-zinc-950 animate-pulse" />
+            )}
+          </button>
+        )}
+
         {/* Backdrop overlay when mobile sidebar is expanded */}
         {!isMinimizedMobile && (
           <div 
-            className="fixed inset-0 bg-black/65 backdrop-blur-xs z-35 transition-opacity duration-300"
+            className="fixed inset-0 bg-black/75 backdrop-blur-xs z-35 transition-opacity duration-300"
             onClick={() => setIsMinimizedMobile(true)}
           />
         )}
 
         <aside 
-          className={`fixed top-0 bottom-0 left-0 h-screen z-40 border-r flex flex-col transition-all duration-300 ease-in-out ${
-            isMinimizedMobile ? 'w-[64px]' : 'w-[250px]'
+          className={`fixed top-0 bottom-0 left-0 h-screen w-[270px] z-40 border-r flex flex-col transition-transform duration-300 ease-in-out ${
+            isMinimizedMobile ? '-translate-x-full' : 'translate-x-0'
           } ${
             theme === 'dark' 
               ? 'bg-[#141414] border-zinc-900 text-white' 
               : 'bg-white border-zinc-200 text-zinc-900'
           }`}
         >
-          {/* Header containing Toggle/Minimize Trigger */}
-          <div className="p-3 border-b border-zinc-900/10 dark:border-zinc-900/40 flex items-center justify-between shrink-0 h-[64px]">
-            {isMinimizedMobile ? (
-              <button
-                onClick={() => setIsMinimizedMobile(false)}
-                id="mobile-sidebar-expand-btn"
-                className="w-10 h-10 rounded-xl bg-zinc-950/25 border border-zinc-800/15 flex items-center justify-center text-[#D35400] hover:bg-zinc-900/30 mx-auto cursor-pointer"
-                title="Expandir Menu"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            ) : (
-              <div className="flex items-center justify-between w-full h-full">
-                <div className="flex items-center gap-2">
-                  <img
-                    referrerPolicy="no-referrer"
-                    src={logoUrl}
-                    alt="AGRESTE"
-                    className="w-8 h-8 rounded-full object-cover border border-[#D35400]/40"
-                  />
-                  <div className="truncate">
-                    <h1 className="text-sm font-bold font-display text-[#D35400] leading-none">AGRESTE</h1>
-                    <span className="text-[7.5px] font-extrabold font-mono tracking-wider text-zinc-400 dark:text-white/95 leading-none uppercase mt-0.5 block">saúde ambiental</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsMinimizedMobile(true)}
-                  id="mobile-sidebar-minimize-btn"
-                  className="w-8 h-8 rounded-lg bg-zinc-950/20 text-zinc-400 hover:text-[#D35400] flex items-center justify-center cursor-pointer"
-                  title="Recolher Menu"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+          {/* Header containing Brand Info and Close Trigger */}
+          <div className="p-4 border-b border-zinc-900/10 dark:border-zinc-900/40 flex items-center justify-between shrink-0 h-[64px]">
+            <div className="flex items-center gap-2.5">
+              <img
+                referrerPolicy="no-referrer"
+                src={logoUrl}
+                alt="AGRESTE"
+                className="w-8.5 h-8.5 rounded-full object-cover border border-[#D35400]/40"
+              />
+              <div className="truncate">
+                <h1 className="text-sm font-bold font-display text-[#D35400] leading-none">AGRESTE</h1>
+                <span className="text-[7.5px] font-extrabold font-mono tracking-wider text-zinc-400 dark:text-white/95 leading-none uppercase mt-0.5 block">saúde ambiental</span>
               </div>
-            )}
+            </div>
+            <button
+              onClick={() => setIsMinimizedMobile(true)}
+              id="mobile-sidebar-close-btn"
+              className="w-8 h-8 rounded-lg bg-zinc-950/20 text-zinc-400 hover:text-[#D35400] flex items-center justify-center cursor-pointer"
+              title="Fechar Menu"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
-          {/* Core Vertical Scrolling List */}
-          <nav className="flex-1 p-2 py-3 space-y-1 overflow-y-auto scrollbar-none">
+          {/* Vertical Scrolling List inside expanded drawer */}
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-none">
             {menuItems.map((item) => {
               const isActive = activeTab === item.id;
               return (
@@ -263,9 +266,7 @@ export default function Sidebar({
                     setIsMinimizedMobile(true); // Auto collapse after select on mobile
                   }}
                   id={`mobile-sidebar-item-${item.id}`}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-100 cursor-pointer ${
-                    isMinimizedMobile ? 'justify-center' : 'justify-start'
-                  } ${
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-100 cursor-pointer justify-start ${
                     isActive
                       ? 'bg-[#D35400] text-white shadow-md shadow-[#D35400]/10'
                       : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/40'
@@ -275,84 +276,57 @@ export default function Sidebar({
                 >
                   <span className={`relative shrink-0 ${isActive ? 'text-white' : 'text-zinc-500'}`}>
                     {item.icon}
-                    {/* Tiny badge indicator counts */}
-                    {isMinimizedMobile && item.id === 'clientes' && pendingPaymentsCount > 0 && (
+                    {item.id === 'clientes' && pendingPaymentsCount > 0 && (
                       <span className="absolute -top-1 -right-1 bg-red-600 text-white w-2.5 h-2.5 text-[7px] leading-none rounded-full flex items-center justify-center font-bold ring-2 ring-zinc-950">
                         {pendingPaymentsCount}
                       </span>
                     )}
-                    {isMinimizedMobile && item.id === 'documentacao' && pendingDocsCount > 0 && (
+                    {item.id === 'documentacao' && pendingDocsCount > 0 && (
                       <span className="absolute -top-1 -right-1 bg-amber-500 text-white w-2 h-2 rounded-full ring-2 ring-zinc-950" />
                     )}
                   </span>
 
-                  {!isMinimizedMobile && (
-                    <motion.span 
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="text-xs truncate text-left flex-1"
-                    >
-                      {item.label}
-                    </motion.span>
-                  )}
+                  <span className="text-xs truncate text-left flex-1 font-semibold">
+                    {item.label}
+                  </span>
 
-                  {!isMinimizedMobile && item.badge}
+                  {item.badge}
                 </button>
               );
             })}
           </nav>
 
           {/* Footer profile & logout triggers */}
-          <div className="p-3 border-t border-zinc-900/10 dark:border-zinc-900 space-y-3 shrink-0">
-            {isMinimizedMobile ? (
-              <button
-                onClick={() => {
-                  setActiveTab('perfil');
-                  setIsMinimizedMobile(true);
-                }}
-                className="w-10 h-10 rounded-full mx-auto block overflow-hidden border border-[#D35400]/30 cursor-pointer hover:border-[#D35400]"
-                title={`${profile.name} • ${profile.cargo || 'Operador Técnico'}`}
-              >
-                <img
-                  referrerPolicy="no-referrer"
-                  src={profile.photoUrl || logoUrl}
-                  alt={profile.name}
-                  className="w-full h-full object-cover"
-                />
-              </button>
-            ) : (
-              <div 
-                onClick={() => {
-                  setActiveTab('perfil');
-                  setIsMinimizedMobile(true);
-                }}
-                className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer hover:bg-zinc-900/35 transition-all ${
-                  theme === 'light' ? 'hover:bg-zinc-100' : ''
-                }`}
-              >
-                <img
-                  referrerPolicy="no-referrer"
-                  src={profile.photoUrl || logoUrl}
-                  alt={profile.name}
-                  className="w-9 h-9 rounded-full object-cover border border-[#D35400]/30"
-                />
-                <div className="truncate text-left w-full pr-1">
-                  <p className="text-xs font-bold text-zinc-300 dark:text-zinc-100 truncate">{profile.name}</p>
-                  <p className="text-[10px] text-[#D35400] truncate font-medium">{profile.cargo || 'Operador Técnico'}</p>
-                </div>
+          <div className="p-4 border-t border-zinc-900/10 dark:border-zinc-900 space-y-3 shrink-0">
+            <div 
+              onClick={() => {
+                setActiveTab('perfil');
+                setIsMinimizedMobile(true);
+              }}
+              className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer hover:bg-zinc-900/35 transition-all ${
+                theme === 'light' ? 'hover:bg-zinc-100' : ''
+              }`}
+            >
+              <img
+                referrerPolicy="no-referrer"
+                src={profile.photoUrl || logoUrl}
+                alt={profile.name}
+                className="w-9 h-9 rounded-full object-cover border border-[#D35400]/30"
+              />
+              <div className="truncate text-left w-full pr-1">
+                <p className="text-xs font-bold text-zinc-300 dark:text-zinc-100 truncate">{profile.name}</p>
+                <p className="text-[10px] text-[#D35400] truncate font-medium">{profile.cargo || 'Operador Técnico'}</p>
               </div>
-            )}
+            </div>
 
             <button
               onClick={onLogout}
               id="mobile-sidebar-logout-btn"
-              className={`w-full py-2 bg-zinc-950 hover:bg-zinc-900/50 hover:border-zinc-850 dark:hover:bg-zinc-900/60 border border-zinc-900 text-red-500 dark:text-red-400 font-bold rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
-                isMinimizedMobile ? 'px-0 text-[10px]' : 'gap-2 text-xs'
-              }`}
+              className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-900/50 hover:border-zinc-850 dark:hover:bg-zinc-900/60 border border-zinc-900 text-red-500 dark:text-red-400 font-bold rounded-xl flex items-center justify-center gap-2 text-xs transition-colors cursor-pointer"
               title="Sair do Painel"
             >
               <LogOut className="w-3.5 h-3.5" /> 
-              {!isMinimizedMobile && <span>Sair do Painel</span>}
+              <span>Sair do Painel</span>
             </button>
           </div>
         </aside>
