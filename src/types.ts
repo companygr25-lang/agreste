@@ -136,3 +136,15 @@ export interface FloatingNotification {
   createdAt: string;
   dismissedBy?: string[];
 }
+
+export type WeekdayUnion = 'Segunda' | 'Terça' | 'Quarta' | 'Quinta' | 'Sexta' | 'Sábado' | 'Mensal';
+
+export interface ManagerTask {
+  id: string;
+  day: WeekdayUnion;
+  title: string;
+  completed: boolean;
+  notes?: string;
+  isCustom?: boolean;
+}
+

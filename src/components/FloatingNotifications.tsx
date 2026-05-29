@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Sparkles, MessageSquare, AlertCircle, Check, Users } from 'lucide-react';
 import { AGRESTE_DB } from '../services/db';
-import { FloatingNotification } from '../types';
+import { FloatingNotification, WeekdayUnion } from '../types';
 
 interface FloatingNotificationsProps {
   currentUser: string;
@@ -19,6 +19,16 @@ export default function FloatingNotifications({
   const [localDismissed, setLocalDismissed] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('agreste_locally_dismissed_notifications');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // State to track floating notifications already displayed in a previous session
+  const [sessionAlreadySeenFloating] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('agreste_seen_floating_notifications');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -82,6 +92,112 @@ export default function FloatingNotifications({
     }
   }, [notifications, currentUser, localDismissed]);
 
+  // Hourly background scheduler for Checklist reminders (business hours: 08:00 - 18:00)
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // Proactively request browser Notification Permission
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().catch(err => {
+          console.warn('Notification permission request denied or failed:', err);
+        });
+      }
+    }
+
+    const checkAndNotifyChecklist = () => {
+      const now = new Date();
+      const hours = now.getHours();
+
+      // Commercial/business hours check: 08:00 to 18:00 (8h to 17h inclusive, no triggers at 18:00 or after)
+      if (hours < 8 || hours >= 18) {
+        return;
+      }
+
+      // Identify if the active user is a Manager or Supervisor
+      const userDetails = AGRESTE_DB.getUserDetails();
+      const currentDetails = userDetails[currentUser.toLowerCase().trim()];
+      const profile = AGRESTE_DB.getProfile();
+      const cargoText = (profile?.cargo || currentDetails?.cargo || '').toLowerCase();
+      const isManager = currentUser.toLowerCase().trim() === 'adriano senna' || 
+                        cargoText.includes('gerente') || 
+                        cargoText.includes('supervisor');
+
+      if (!isManager) {
+        return;
+      }
+
+      // Check current day of current week
+      const dayMap: { [key: number]: WeekdayUnion } = {
+        1: 'Segunda',
+        2: 'Terça',
+        3: 'Quarta',
+        4: 'Quinta',
+        5: 'Sexta',
+        6: 'Sábado'
+      };
+      const todayCode = now.getDay();
+      const todayDayName = dayMap[todayCode];
+
+      // Retrieve all checklist tasks
+      const allTasks = AGRESTE_DB.getManagerTasks();
+      // Filter tasks matching today's weekday plus Monthly tasks
+      const todaysTasks = allTasks.filter(t => t.day === todayDayName || t.day === 'Mensal');
+      const pendingTasks = todaysTasks.filter(t => !t.completed);
+
+      // Only notify if there are pending check items
+      if (pendingTasks.length === 0) {
+        return;
+      }
+
+      // Check when the last notification was sent to enforce the strict 1-hour frequency limit
+      const lastNotifiedStr = localStorage.getItem('agreste_checklist_reminder_last_time');
+      const lastNotified = lastNotifiedStr ? Number(lastNotifiedStr) : 0;
+      const oneHourMs = 60 * 60 * 1000;
+
+      if (Date.now() - lastNotified >= oneHourMs) {
+        const title = 'Checklist Pendente 🎯';
+        const message = `Atenção: Você possui ${pendingTasks.length} tarefa(s) pendente(s) no checklist de hoje. Toque para conferir!`;
+
+        // 1. Show in-app notice
+        showToast(message, 'info');
+
+        // 2. Play subtle notification sound
+        try {
+          const audio = new Audio('https://www.image2url.com/r2/default/audio/1779643438140-5768f505-6746-43a6-bc97-5162d73af79a.mp3');
+          audio.play().catch(() => {});
+        } catch {}
+
+        // 3. Desktop / Mobile system-level notification if permitted
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try {
+            const systemNotif = new Notification(title, {
+              body: message,
+              icon: 'https://i.postimg.cc/W3fG6xMt/Whats-App-Image-2026-05-21-at-16-33-40.jpg',
+              tag: 'agreste-checklist-reminder'
+            });
+            systemNotif.onclick = () => {
+              window.focus();
+              setActiveTab('gerencia');
+            };
+          } catch (e) {
+            console.warn('Web notification instantiation failed, falling back:', e);
+          }
+        }
+
+        // Set persistent trigger marker timestamp to local storage
+        localStorage.setItem('agreste_checklist_reminder_last_time', String(Date.now()));
+      }
+    };
+
+    // Evaluate right now
+    checkAndNotifyChecklist();
+
+    // Check periodically every 30 seconds
+    const intervalId = setInterval(checkAndNotifyChecklist, 30000);
+    return () => clearInterval(intervalId);
+  }, [currentUser, setActiveTab]);
+
   const dismissLocally = (id: string) => {
     // Save to user database record so it synchronizes and never shows up for this user on any device
     AGRESTE_DB.dismissNotificationForUser(id, currentUser);
@@ -133,28 +249,57 @@ export default function FloatingNotifications({
     dismissLocally(notif.id);
   };
 
-  const activeNotifs = notifications.filter(notif => {
-    // 1. Filter out locally closed notifications
-    if (localDismissed.includes(notif.id)) return false;
+  const activeNotifs = useMemo(() => {
+    return notifications.filter(notif => {
+      // 1. Filter out locally closed notifications
+      if (localDismissed.includes(notif.id)) return false;
 
-    // Filter out if user dismissed it globally
-    const lowerUser = currentUser.toLowerCase().trim();
-    if (notif.dismissedBy?.includes(lowerUser)) return false;
+      // Filter out if user dismissed it globally
+      const lowerUser = currentUser.toLowerCase().trim();
+      if (notif.dismissedBy?.includes(lowerUser)) return false;
 
-    // 2. Filter out globally dismissed notifications
-    if (notif.status === 'dismissed') return false;
+      // 2. Filter out globally dismissed notifications
+      if (notif.status === 'dismissed') return false;
 
-    // 3. Match user types
-    if (notif.type === 'chat_request') {
-      return notif.targetTech?.toLowerCase().trim() === lowerUser;
+      // 3. Filter out notifications that were already seen before this session started
+      if (sessionAlreadySeenFloating.includes(notif.id)) return false;
+
+      // 4. Match user types
+      if (notif.type === 'chat_request') {
+        return notif.targetTech?.toLowerCase().trim() === lowerUser;
+      }
+      
+      if (notif.type === 'new_registration') {
+        return true; // Visible to all technicians
+      }
+
+      return false;
+    });
+  }, [notifications, localDismissed, currentUser, sessionAlreadySeenFloating]);
+
+  // Save actively floating notifications as seen in localStorage so they don't float ever again
+  useEffect(() => {
+    if (activeNotifs.length > 0) {
+      try {
+        const saved = localStorage.getItem('agreste_seen_floating_notifications');
+        const seenList: string[] = saved ? JSON.parse(saved) : [];
+        let updated = false;
+        
+        activeNotifs.forEach(n => {
+          if (!seenList.includes(n.id)) {
+            seenList.push(n.id);
+            updated = true;
+          }
+        });
+        
+        if (updated) {
+          localStorage.setItem('agreste_seen_floating_notifications', JSON.stringify(seenList));
+        }
+      } catch (e) {
+        console.error('Error saving seen floating notifications:', e);
+      }
     }
-    
-    if (notif.type === 'new_registration') {
-      return true; // Visible to all technicians
-    }
-
-    return false;
-  });
+  }, [activeNotifs]);
 
   if (activeNotifs.length === 0) return null;
 

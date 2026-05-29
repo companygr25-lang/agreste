@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Client, VisitReport, LargeClientActivity, CompanyDocument, Reminder, UserProfile, SystemUserDetail, ChatSession, FloatingNotification } from '../types';
+import { Client, VisitReport, LargeClientActivity, CompanyDocument, Reminder, UserProfile, SystemUserDetail, ChatSession, FloatingNotification, ManagerTask } from '../types';
 import { isSupabaseConfigured, getSupabase } from './supabase';
 
 // Seed Initial Data
@@ -638,5 +638,91 @@ export class AGRESTE_DB {
       pendingQueueLength: 0,
       configured
     };
+  }
+
+  // --- Manager Checklist System (Faithful to Excel Sheet) ---
+  static getManagerTasks(): ManagerTask[] {
+    const defaultTasks: ManagerTask[] = [
+      // SEGUNDA (Monday)
+      { id: 'task-seg-1', day: 'Segunda', title: 'Conferir planilhas de manutenção, EDI, Veículos / Entrega dos certificados', completed: false },
+      { id: 'task-seg-2', day: 'Segunda', title: 'Conferir roteiros marcados / ver com operadores planejamento do dia', completed: false },
+      { id: 'task-seg-3', day: 'Segunda', title: 'Conferir: atendimento (whats, insta, email, financeiro (se preencheu planilha, pós-venda) vendas (renovações, vendas novas, visitas)', completed: false },
+      { id: 'task-seg-4', day: 'Segunda', title: 'Estudar 30 min', completed: false },
+      { id: 'task-seg-5', day: 'Segunda', title: 'Trabalhos esporádicos (olhar planko, cancelar roteiros, etc)', completed: false },
+      { id: 'task-seg-6', day: 'Segunda', title: 'Serviços externos (COBRANÇA E VISITAS DE SUPERVISÃO)', completed: false },
+      { id: 'task-seg-7', day: 'Segunda', title: 'Almoço', completed: false },
+      { id: 'task-seg-8', day: 'Segunda', title: 'Conferir roteiros marcados / ver com operadores planejamento do dia', completed: false },
+      { id: 'task-seg-9', day: 'Segunda', title: 'Financeiro (pagar contas e dar baixa no sistema)', completed: false },
+      { id: 'task-seg-10', day: 'Segunda', title: 'Acompanhar operação', completed: false },
+      { id: 'task-seg-11', day: 'Segunda', title: 'Preencher planilhas e fazer relatórios', completed: false },
+      { id: 'task-seg-12', day: 'Segunda', title: 'Conferencia de roteiros do dia e olhar roteiros do dia seguinte', completed: false },
+
+      // TERÇA (Tuesday)
+      { id: 'task-ter-1', day: 'Terça', title: 'Conferir roteiros marcados / ver com operadores planejamento do dia', completed: false },
+      { id: 'task-ter-2', day: 'Terça', title: 'Conferir: atendimento (whats, insta, email, financeiro (se preencheu planilha, pós-venda) vendas (renovações, vendas novas, visitas)', completed: false },
+      { id: 'task-ter-3', day: 'Terça', title: 'Estudar 30 min', completed: false },
+      { id: 'task-ter-4', day: 'Terça', title: 'Trabalhos esporádicos (olhar planko, cancelar roteiros, etc)', completed: false },
+      { id: 'task-ter-5', day: 'Terça', title: 'Serviços externos (COBRANÇA E VISITAS DE SUPERVISÃO)', completed: false },
+      { id: 'task-ter-6', day: 'Terça', title: 'Almoço', completed: false },
+      { id: 'task-ter-7', day: 'Terça', title: 'Conferir roteiros marcados / ver com operadores planejamento do dia', completed: false },
+      { id: 'task-ter-8', day: 'Terça', title: 'Financeiro (pagar contas e dar baixa no sistema)', completed: false },
+      { id: 'task-ter-9', day: 'Terça', title: 'Acompanhar operação', completed: false },
+      { id: 'task-ter-10', day: 'Terça', title: 'Preencher planilhas e fazer relatórios', completed: false },
+      { id: 'task-ter-11', day: 'Terça', title: 'Conferir as demanda da empresa e roteiro do dia', completed: false },
+
+      // QUARTA (Wednesday)
+      { id: 'task-qua-1', day: 'Quarta', title: 'Laboratorio de aprendizado', completed: false },
+      { id: 'task-qua-2', day: 'Quarta', title: 'Conferir roteiros marcados / ver com operadores planejamento do dia', completed: false },
+      { id: 'task-qua-3', day: 'Quarta', title: 'Conferir: atendimento (whats, insta, email, financeiro (se preencheu planilha, pós-venda) vendas (renovações, vendas novas, visitas)', completed: false },
+      { id: 'task-qua-4', day: 'Quarta', title: 'Estudar 30 min', completed: false },
+      { id: 'task-qua-5', day: 'Quarta', title: 'Trabalhos esporádicos (olhar planko, cancelar roteiros, etc)', completed: false },
+      { id: 'task-qua-6', day: 'Quarta', title: 'Serviços externos (COBRANÇA E VISITAS DE SUPERVISÃO)', completed: false },
+      { id: 'task-qua-7', day: 'Quarta', title: 'Almoço', completed: false },
+      { id: 'task-qua-8', day: 'Quarta', title: 'Conferir roteiros marcados / ver com operadores planejamento do dia', completed: false },
+      { id: 'task-qua-9', day: 'Quarta', title: 'Financeiro (pagar contas e dar baixa no sistema)', completed: false },
+      { id: 'task-qua-10', day: 'Quarta', title: 'Acompanhar operação', completed: false },
+      { id: 'task-qua-11', day: 'Quarta', title: 'Preencher planilhas e fazer relatórios', completed: false },
+      { id: 'task-qua-12', day: 'Quarta', title: 'Conferir as demanda da empresa e roteiro do dia', completed: false },
+
+      // QUINTA (Thursday)
+      { id: 'task-qui-1', day: 'Quinta', title: 'Conferir roteiros marcados / ver com operadores planejamento do dia', completed: false },
+      { id: 'task-qui-2', day: 'Quinta', title: 'Conferir: atendimento (whats, insta, email, financeiro (se preencheu planilha, pós-venda) vendas (renovações, vendas novas, visitas)', completed: false },
+      { id: 'task-qui-3', day: 'Quinta', title: 'Estudar 30 min', completed: false },
+      { id: 'task-qui-4', day: 'Quinta', title: 'Trabalhos esporádicos (olhar planko, cancelar roteiros, etc)', completed: false },
+      { id: 'task-qui-5', day: 'Quinta', title: 'Serviços externos (COBRANÇA E VISITAS DE SUPERVISÃO)', completed: false },
+      { id: 'task-qui-6', day: 'Quinta', title: 'Almoço', completed: false },
+      { id: 'task-qui-7', day: 'Quinta', title: 'Conferir roteiros marcados / ver com operadores planejamento do dia', completed: false },
+      { id: 'task-qui-8', day: 'Quinta', title: 'Financeiro (pagar contas e dar baixa no sistema)', completed: false },
+      { id: 'task-qui-9', day: 'Quinta', title: 'Acompanhar operação', completed: false },
+      { id: 'task-qui-10', day: 'Quinta', title: 'Preencher planilhas e fazer relatórios', completed: false },
+      { id: 'task-qui-11', day: 'Quinta', title: 'Conferir as demanda da empresa e roteiro do dia', completed: false },
+
+      // SEXTA (Friday)
+      { id: 'task-sex-1', day: 'Sexta', title: 'Conferir roteiros marcados / ver com operadores planejamento do dia', completed: false },
+      { id: 'task-sex-2', day: 'Sexta', title: 'Reunião com sócios', completed: false },
+      { id: 'task-sex-3', day: 'Sexta', title: 'Conferir: atendimento (whats, insta, email, financeiro (se preencheu planilha, pós-venda) vendas (renovações, vendas novas, visitas)', completed: false },
+      { id: 'task-sex-4', day: 'Sexta', title: 'Estudar 30 min', completed: false },
+      { id: 'task-sex-5', day: 'Sexta', title: 'Trabalhos esporádicos (olhar planko, cancelar roteiros, etc)', completed: false },
+      { id: 'task-sex-6', day: 'Sexta', title: 'Serviços externos (COBRANÇA E VISITAS DE SUPERVISÃO)', completed: false },
+      { id: 'task-sex-7', day: 'Sexta', title: 'Almoço', completed: false },
+      { id: 'task-sex-8', day: 'Sexta', title: 'Conferir roteiros marcados / ver com operadores planejamento do dia', completed: false },
+      { id: 'task-sex-9', day: 'Sexta', title: 'Financeiro (pagar contas e dar baixa no sistema)', completed: false },
+      { id: 'task-sex-10', day: 'Sexta', title: 'Acompanhar operação', completed: false },
+      { id: 'task-sex-11', day: 'Sexta', title: 'Preencher planilhas e fazer relatórios', completed: false },
+      { id: 'task-sex-12', day: 'Sexta', title: 'Conferir as demanda da empresa e roteiro do dia', completed: false },
+
+      // SÁBADO (Saturday)
+      { id: 'task-sab-1', day: 'Sábado', title: 'Conferir roteiros marcados / ver com operadores planejamento do dia', completed: false },
+      { id: 'task-sab-2', day: 'Sábado', title: 'Visitas de supervisão e cobrança', completed: false },
+
+      // MENSAL (Monthly)
+      { id: 'task-men-1', day: 'Mensal', title: '30 de cada mês: Levantamento do estoque', completed: false },
+      { id: 'task-men-2', day: 'Mensal', title: '01 de cada mês: Cobrar as compras / feira e papelaria / Conferir estoque mínimo e fazer pedido TR', completed: false }
+    ];
+    return this.get<ManagerTask[]>('manager_tasks', defaultTasks);
+  }
+
+  static saveManagerTasks(tasks: ManagerTask[]): void {
+    this.set('manager_tasks', tasks);
   }
 }

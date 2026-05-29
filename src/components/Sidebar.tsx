@@ -7,7 +7,7 @@ import React from 'react';
 import { 
   Building2, Users, Calendar, FileText, FileCheck, 
   Settings, User, LogOut, Sun, Moon, Sparkles, Clock, Landmark, MessageSquare, BookOpen,
-  Menu, X
+  Menu, X, ClipboardList
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Client, CompanyDocument, UserProfile } from '../types';
@@ -50,6 +50,17 @@ export default function Sidebar({
   const allowedTabs = [
     ...(currentDetails?.allowedTabs || ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'faturamento', 'perfil', 'configuracoes']),
   ];
+
+  const isManager = isProvider || 
+                    normalizedUser === 'adriano senna' || 
+                    profile.cargo?.toLowerCase().includes('gerente') || 
+                    profile.cargo?.toLowerCase().includes('supervisor') || 
+                    currentDetails?.cargo?.toLowerCase().includes('gerente') || 
+                    currentDetails?.cargo?.toLowerCase().includes('supervisor');
+
+  if (isManager && !allowedTabs.includes('gerencia')) {
+    allowedTabs.push('gerencia');
+  }
   
   // Ensure faturamento is always present for all users
   if (!allowedTabs.includes('faturamento')) {
@@ -100,6 +111,7 @@ export default function Sidebar({
     },
     { id: 'faturamento', label: 'Faturamento', icon: <Landmark className="w-4.5 h-4.5" /> },
     { id: 'controles', label: 'Tipos de Controles', icon: <BookOpen className="w-4.5 h-4.5" /> },
+    { id: 'gerencia', label: 'Checklist', icon: <ClipboardList className="w-4.5 h-4.5" /> },
     { id: 'agreste-chat', label: 'Agreste Chat', icon: <MessageSquare className="w-4.5 h-4.5" /> },
     { id: 'perfil', label: 'Meu Perfil', icon: <User className="w-4.5 h-4.5" /> },
     { id: 'configuracoes', label: isProvider ? 'Configuração' : 'Configurações', icon: <Settings className="w-4.5 h-4.5" /> },

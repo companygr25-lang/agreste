@@ -22,6 +22,7 @@ import AgresteChat from './components/AgresteChat';
 import FloatingNotifications from './components/FloatingNotifications';
 import BillingTab from './components/BillingTab';
 import ControlesTab from './components/ControlesTab';
+import GerenciaTab from './components/GerenciaTab';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -222,7 +223,7 @@ export default function App() {
         />
 
         {/* Core Screen Container */}
-        <main className="flex-1 p-4 pt-18 sm:p-6 sm:pt-20 lg:p-8 overflow-y-auto pb-8 lg:pb-8" id="app-viewport">
+        <main className="flex-1 p-4 pt-18 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8 overflow-y-auto pb-8 lg:pb-8" id="app-viewport">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -306,6 +307,13 @@ export default function App() {
 
               {activeTab === 'controles' && (
                 <ControlesTab
+                  theme={theme}
+                  showToast={showToast}
+                />
+              )}
+
+              {activeTab === 'gerencia' && (
+                <GerenciaTab
                   theme={theme}
                   showToast={showToast}
                 />

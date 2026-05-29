@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { Client, CompanyDocument, VisitReport } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Client, CompanyDocument, VisitReport, FloatingNotification } from '../types';
 import { AGRESTE_DB } from '../services/db';
 import { 
   Users, CheckCircle2, AlertTriangle, FileCheck, Landmark, ArrowRight,
   TrendingUp, Calendar, ArrowUpRight, DollarSign, Clock, HelpCircle,
-  Check, Sparkles, ClipboardCheck, Plus, Trash2
+  Check, Sparkles, ClipboardCheck, Plus, Trash2, Bell, BellRing, MessageSquare, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -36,6 +36,69 @@ export default function DashboardTab({
   theme, clients, reports, documents, setActiveTab, showToast, onRefreshData, currentUser 
 }: DashboardTabProps) {
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
+
+  // States and subscription for Bell Notifications
+  const [dbNotifications, setDbNotifications] = useState<FloatingNotification[]>(() => AGRESTE_DB.getNotifications());
+  const [showBellDropdown, setShowBellDropdown] = useState(false);
+
+  useEffect(() => {
+    const handleSync = () => {
+      setDbNotifications(AGRESTE_DB.getNotifications());
+    };
+    return AGRESTE_DB.subscribeToRealtime(handleSync);
+  }, []);
+
+  const handleMarkAsRead = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const lowerUser = (currentUser || '').toLowerCase().trim();
+    AGRESTE_DB.dismissNotificationForUser(id, lowerUser);
+    showToast('Notificação marcada como lida.', 'success');
+  };
+
+  const handleAcceptFromBell = (notif: FloatingNotification, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const lowerUser = (currentUser || '').toLowerCase().trim();
+    const result = AGRESTE_DB.tryAcceptNotification(notif.id, lowerUser);
+    if (result.success) {
+      showToast('Atendimento aceito com sucesso!', 'success');
+      if (notif.type === 'chat_request' && notif.chatId) {
+        const chats = AGRESTE_DB.getChats();
+        const updated = chats.map(c => {
+          if (c.id === notif.chatId) {
+            return {
+              ...c,
+              assignedTech: lowerUser,
+              status: 'active_with_tech' as const
+            };
+          }
+          return c;
+        });
+        AGRESTE_DB.saveChats(updated);
+        localStorage.setItem('agreste_active_chat_id', notif.chatId);
+        setActiveTab('agreste-chat');
+      } else if (notif.type === 'new_registration') {
+        setActiveTab('clientes');
+      }
+    } else {
+      showToast(result.message, 'error');
+    }
+    AGRESTE_DB.dismissNotificationForUser(notif.id, lowerUser);
+    setShowBellDropdown(false);
+  };
+
+  const lowerUserTrimmed = (currentUser || '').toLowerCase().trim();
+  const importantNotifications = dbNotifications.filter(notif => {
+    if (notif.dismissedBy?.includes(lowerUserTrimmed)) return false;
+    if (notif.status === 'dismissed') return false;
+
+    if (notif.type === 'chat_request') {
+      return notif.targetTech?.toLowerCase().trim() === lowerUserTrimmed;
+    }
+    if (notif.type === 'new_registration') {
+      return true;
+    }
+    return false;
+  });
 
   // Field checklist manual user state - starts empty
   const [objectives, setObjectives] = useState<TechnicalObjective[]>(() => {
@@ -197,7 +260,7 @@ export default function DashboardTab({
     return (
       <div className="space-y-6 animate-fade-in" id="provider-dashboard-view">
         {/* Welcome Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-zinc-900/10 dark:border-zinc-800/40 pb-5 text-left">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-zinc-900/10 dark:border-zinc-800/40 pb-5 text-left">
           <div>
             <h2 className="text-2xl font-black font-display tracking-tight text-[#D35400] uppercase flex items-center gap-2">
               <Landmark className="w-6 h-6 shrink-0 text-[#D35400]" /> PAINEL DO PROVEDOR
@@ -206,13 +269,134 @@ export default function DashboardTab({
               Gerencie a cobrança das licenças, faturamento de mensalidades ativos e status de contas.
             </p>
           </div>
-          <div className="text-right flex flex-col items-start md:items-end font-mono">
-            <span className="text-[11px] font-bold tracking-wider text-[#D35400] uppercase">
-              GIL SILVA • ADMINISTRADOR
-            </span>
-            <span className="text-[9px] font-extrabold text-[#D35400]/85 uppercase tracking-wider mt-0.5">
-              PROVEDOR DO SISTEMA
-            </span>
+          
+          <div className="flex items-center gap-3.5 justify-between w-full md:w-auto self-stretch md:self-auto">
+            
+            {/* BOTÃO DE SINO NOTIFICAÇÕES PARA PROVEDOR */}
+            <div className="relative">
+              <button
+                type="button"
+                id="btn-bell-notifications-provider"
+                onClick={() => setShowBellDropdown(!showBellDropdown)}
+                className={`p-2.5 rounded-xl transition-all cursor-pointer relative flex items-center justify-center ${
+                  theme === 'dark'
+                    ? 'bg-zinc-900 hover:bg-zinc-805 border border-zinc-800 text-zinc-200 hover:text-white'
+                    : 'bg-zinc-100 hover:bg-zinc-150 border border-zinc-200 text-zinc-700 hover:text-zinc-900 shadow-3xs'
+                }`}
+                title="Notificações e Alertas"
+              >
+                <Bell className={`w-4 h-4 ${importantNotifications.length > 0 ? 'text-[#D35400] animate-bounce' : ''}`} />
+                
+                {importantNotifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 text-[8px] font-black text-white items-center justify-center">
+                      {importantNotifications.length}
+                    </span>
+                  </span>
+                )}
+              </button>
+
+              {/* DROPDOWN MENU */}
+              <AnimatePresence>
+                {showBellDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    className={`absolute right-0 md:right-0 mt-2 w-80 rounded-2xl border p-4 shadow-2xl z-50 text-left ${
+                      theme === 'dark'
+                        ? 'bg-zinc-950 border-zinc-850 text-zinc-100 shadow-[0_20px_40px_rgba(0,0,0,0.8)]'
+                        : 'bg-white border-zinc-200 text-zinc-900 shadow-[0_20px_40px_rgba(0,0,0,0.15)]'
+                    }`}
+                    style={{ minWidth: '280px' }}
+                  >
+                    <div className="flex justify-between items-center pb-2 border-b border-zinc-900 dark:border-zinc-850 mb-3">
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#D35400]">ALERTAS IMPORTANTES</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setShowBellDropdown(false)}
+                        className="text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {importantNotifications.length === 0 ? (
+                      <div className="py-8 text-center text-zinc-500 flex flex-col items-center gap-1">
+                        <p className="text-xs font-bold leading-none">Nadar por aqui! 🏖️</p>
+                        <p className="text-[10px] text-zinc-500">Nenhuma notificação importante no momento.</p>
+                      </div>
+                    ) : (
+                      <div className="max-h-72 overflow-y-auto space-y-3.5 pr-1 py-1">
+                        {importantNotifications.map((notif) => {
+                          const isChat = notif.type === 'chat_request';
+                          return (
+                            <div 
+                              key={notif.id} 
+                              className={`p-3 rounded-xl border flex flex-col gap-2 transition-all ${
+                                theme === 'dark'
+                                  ? 'border-zinc-900 bg-zinc-900/40 hover:border-zinc-850'
+                                  : 'border-zinc-100 bg-zinc-50 hover:bg-zinc-100/70'
+                              }`}
+                            >
+                              <div className="flex items-start gap-2.5">
+                                <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+                                  isChat ? 'bg-orange-500/10 text-orange-400' : 'bg-emerald-500/10 text-emerald-400'
+                                }`}>
+                                  {isChat ? <MessageSquare className="w-4 h-4" /> : <Users className="w-4 h-4" />}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="text-[11px] font-bold leading-tight">{notif.title}</h4>
+                                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                                    {notif.message}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-900/5 dark:border-zinc-900/15">
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleAcceptFromBell(notif, e)}
+                                  className={`px-2.5 py-1 text-[9px] rounded-lg font-bold uppercase cursor-pointer transition-colors ${
+                                    isChat 
+                                      ? 'bg-orange-600 hover:bg-orange-500 text-white' 
+                                      : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                  }`}
+                                >
+                                  {isChat ? 'ATENDER' : 'VISUALIZAR'}
+                                </button>
+                                
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleMarkAsRead(notif.id, e)}
+                                  className={`px-2.5 py-1 text-[9px] rounded-lg font-bold uppercase cursor-pointer border transition-colors ${
+                                    theme === 'dark'
+                                      ? 'bg-zinc-900 hover:bg-zinc-805 border-zinc-800 text-zinc-300'
+                                      : 'bg-white hover:bg-zinc-100 border-zinc-200 text-zinc-600'
+                                  }`}
+                                >
+                                  LIDA
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="text-right flex flex-col items-start md:items-end font-mono">
+              <span className="text-[11px] font-bold tracking-wider text-[#D35400] uppercase">
+                GIL SILVA • ADMINISTRADOR
+              </span>
+              <span className="text-[9px] font-extrabold text-[#D35400]/85 uppercase tracking-wider mt-0.5">
+                PROVEDOR DO SISTEMA
+              </span>
+            </div>
           </div>
         </div>
 
@@ -415,7 +599,7 @@ export default function DashboardTab({
   return (
     <div className="space-y-5">
       {/* Welcome Banner */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-black font-display tracking-tight uppercase text-zinc-100 dark:text-zinc-50 flex flex-wrap items-center gap-x-2">
             PAINEL GERAL <span className="text-[#D35400] font-black">SAÚDE AMBIENTAL</span>
@@ -424,13 +608,135 @@ export default function DashboardTab({
             Acompanhamento em alta densidade do controle de pragas sanitário e obrigações técnicas diárias.
           </p>
         </div>
-        <div className="text-right flex flex-col items-start md:items-end font-mono">
-          <span className="text-[11px] font-bold tracking-wider text-[#D35400] uppercase">
-            {currentDateStr} • {currentName}
-          </span>
-          <span className="text-[9px] font-extrabold text-zinc-400 dark:text-zinc-500 tracking-widest uppercase mt-0.5">
-            RESPONSÁVEL OPERACIONAL
-          </span>
+        
+        {/* Date Row with Clickable Bell Notification Mark to its left */}
+        <div className="flex items-center gap-3.5 justify-between w-full md:w-auto self-stretch md:self-auto">
+          
+          {/* BOTÃO DE SINO NOTIFICAÇÕES */}
+          <div className="relative">
+            <button
+              type="button"
+              id="btn-bell-notifications"
+              onClick={() => setShowBellDropdown(!showBellDropdown)}
+              className={`p-2.5 rounded-xl transition-all cursor-pointer relative flex items-center justify-center ${
+                theme === 'dark'
+                  ? 'bg-zinc-900 hover:bg-zinc-805 border border-zinc-800 text-zinc-200 hover:text-white'
+                  : 'bg-zinc-100 hover:bg-zinc-150 border border-zinc-200 text-zinc-700 hover:text-zinc-900 shadow-3xs'
+              }`}
+              title="Notificações e Alertas"
+            >
+              <Bell className={`w-4 h-4 ${importantNotifications.length > 0 ? 'text-[#D35400] animate-bounce' : ''}`} />
+              
+              {importantNotifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 text-[8px] font-black text-white items-center justify-center">
+                    {importantNotifications.length}
+                  </span>
+                </span>
+              )}
+            </button>
+
+            {/* DROPDOWN MENU */}
+            <AnimatePresence>
+              {showBellDropdown && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  className={`absolute right-0 md:right-0 mt-2 w-80 rounded-2xl border p-4 shadow-2xl z-50 text-left ${
+                    theme === 'dark'
+                      ? 'bg-zinc-950 border-zinc-850 text-zinc-100 shadow-[0_20px_40px_rgba(0,0,0,0.8)]'
+                      : 'bg-white border-zinc-200 text-zinc-900 shadow-[0_20px_40px_rgba(0,0,0,0.15)]'
+                  }`}
+                  style={{ minWidth: '280px' }}
+                >
+                  <div className="flex justify-between items-center pb-2 border-b border-zinc-900 dark:border-zinc-850 mb-3">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#D35400]">ALERTAS IMPORTANTES</span>
+                    <button 
+                      type="button" 
+                      onClick={() => setShowBellDropdown(false)}
+                      className="text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {importantNotifications.length === 0 ? (
+                    <div className="py-8 text-center text-zinc-500 flex flex-col items-center gap-1">
+                      <p className="text-xs font-bold leading-none">Nadar por aqui! 🏖️</p>
+                      <p className="text-[10px] text-zinc-500">Nenhuma notificação importante no momento.</p>
+                    </div>
+                  ) : (
+                    <div className="max-h-72 overflow-y-auto space-y-3.5 pr-1 py-1">
+                      {importantNotifications.map((notif) => {
+                        const isChat = notif.type === 'chat_request';
+                        return (
+                          <div 
+                            key={notif.id} 
+                            className={`p-3 rounded-xl border flex flex-col gap-2 transition-all ${
+                              theme === 'dark'
+                                ? 'border-zinc-900 bg-zinc-900/40 hover:border-zinc-850'
+                                : 'border-zinc-100 bg-zinc-50 hover:bg-zinc-100/70'
+                            }`}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+                                isChat ? 'bg-orange-500/10 text-orange-400' : 'bg-emerald-500/10 text-emerald-400'
+                              }`}>
+                                {isChat ? <MessageSquare className="w-4 h-4" /> : <Users className="w-4 h-4" />}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h4 className="text-[11px] font-bold leading-tight">{notif.title}</h4>
+                                <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                                  {notif.message}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-900/5 dark:border-zinc-900/15">
+                              <button
+                                type="button"
+                                onClick={(e) => handleAcceptFromBell(notif, e)}
+                                className={`px-2.5 py-1 text-[9px] rounded-lg font-bold uppercase cursor-pointer transition-colors ${
+                                  isChat 
+                                    ? 'bg-orange-600 hover:bg-orange-500 text-white' 
+                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                }`}
+                              >
+                                {isChat ? 'ATENDER' : 'VISUALIZAR'}
+                              </button>
+                              
+                              <button
+                                type="button"
+                                onClick={(e) => handleMarkAsRead(notif.id, e)}
+                                className={`px-2.5 py-1 text-[9px] rounded-lg font-bold uppercase cursor-pointer border transition-colors ${
+                                  theme === 'dark'
+                                    ? 'bg-zinc-900 hover:bg-zinc-805 border-zinc-800 text-zinc-300'
+                                    : 'bg-white hover:bg-zinc-100 border-zinc-200 text-zinc-600'
+                                }`}
+                              >
+                                LIDA
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className="text-right flex flex-col items-start md:items-end font-mono">
+            <span className="text-[11px] font-bold tracking-wider text-[#D35400] uppercase">
+              {currentDateStr} • {currentName}
+            </span>
+            <span className="text-[9px] font-extrabold text-zinc-400 dark:text-zinc-500 tracking-widest uppercase mt-0.5">
+              RESPONSÁVEL OPERACIONAL
+            </span>
+          </div>
         </div>
       </div>
 
