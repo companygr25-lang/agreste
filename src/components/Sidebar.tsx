@@ -48,7 +48,7 @@ export default function Sidebar({
   const userDetails = AGRESTE_DB.getUserDetails();
   const currentDetails = userDetails[normalizedUser];
   const allowedTabs = [
-    ...(currentDetails?.allowedTabs || ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'faturamento', 'perfil', 'configuracoes']),
+    ...(currentDetails?.allowedTabs || ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'perfil', 'configuracoes']),
   ];
 
   const isManager = isProvider || 
@@ -60,11 +60,6 @@ export default function Sidebar({
 
   if (isManager && !allowedTabs.includes('gerencia')) {
     allowedTabs.push('gerencia');
-  }
-  
-  // Ensure faturamento is always present for all users
-  if (!allowedTabs.includes('faturamento')) {
-    allowedTabs.push('faturamento');
   }
 
   // Ensure controles is always present for all users as a technical guide
@@ -109,7 +104,6 @@ export default function Sidebar({
         </span>
       ) : null
     },
-    { id: 'faturamento', label: 'Faturamento', icon: <Landmark className="w-4.5 h-4.5" /> },
     { id: 'controles', label: 'Tipos de Controles', icon: <BookOpen className="w-4.5 h-4.5" /> },
     { id: 'gerencia', label: 'Checklist', icon: <ClipboardList className="w-4.5 h-4.5" /> },
     { id: 'agreste-chat', label: 'Agreste Chat', icon: <MessageSquare className="w-4.5 h-4.5" /> },
