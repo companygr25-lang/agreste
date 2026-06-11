@@ -266,7 +266,7 @@ export class AGRESTE_DB {
 
     const newClient: Client = {
       ...client,
-      id: `cli-${Date.now()}`,
+      id: `cli-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       code: clientCode,
       createdAt: new Date().toISOString().split('T')[0],
     };
@@ -347,7 +347,7 @@ export class AGRESTE_DB {
     const reports = this.getReports();
     const newReport: VisitReport = {
       ...report,
-      id: `rep-${Date.now()}`,
+      id: `rep-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       createdAt: new Date().toISOString(),
     };
     reports.push(newReport);
@@ -369,7 +369,7 @@ export class AGRESTE_DB {
     const calendar = this.getCalendar();
     const newEvent: LargeClientActivity = {
       ...event,
-      id: `cal-${Date.now()}`,
+      id: `cal-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
     };
     calendar.push(newEvent);
     this.set('calendar', calendar);
@@ -399,7 +399,7 @@ export class AGRESTE_DB {
     const docs = this.getDocuments();
     const newDoc: CompanyDocument = {
       ...doc,
-      id: `doc-${Date.now()}`,
+      id: `doc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
     };
     docs.push(newDoc);
     this.set('documents', docs);
@@ -429,7 +429,7 @@ export class AGRESTE_DB {
     const reminders = this.getReminders();
     const newRem: Reminder = {
       ...rem,
-      id: `rem-${Date.now()}`,
+      id: `rem-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       completed: false
     };
     reminders.push(newRem);

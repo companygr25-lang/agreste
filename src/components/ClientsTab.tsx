@@ -12,6 +12,8 @@ import {
   FileSpreadsheet, FileText, UploadCloud
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import * as XLSX from 'xlsx';
+import mammoth from 'mammoth';
 
 interface ClientsTabProps {
   theme: 'light' | 'dark';
@@ -71,95 +73,141 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
     processImportFile(file);
   };
 
-  const processImportFile = (file: File) => {
+  const processImportFile = async (file: File) => {
     setImportingFile(file);
     setImportStep('loading');
     
     const fileExt = file.name.split('.').pop()?.toLowerCase();
     
-    let stepCount = 0;
-    const steps = [
-      'Carregando arquivo e calculando checksum de integridade...',
-      fileExt === 'pdf' 
-        ? 'Executando leitura de OCR e extraindo camadas textuais do PDF...' 
-        : fileExt === 'docx' || fileExt === 'doc'
-        ? 'Analisando padronização do documento Word, tabelas e rodapés...'
-        : 'Interagindo com planilha Excel, mapeando colunas e decodificando células...',
-      'Estruturando novas frentes cadastrais...',
-      'Mapeamento consolidado, pronto para revisão!'
-    ];
-
-    const interval = setInterval(() => {
-      if (stepCount < steps.length) {
-        setImportProgressText(steps[stepCount]);
-        stepCount++;
-      } else {
-        clearInterval(interval);
-        
-        // Setup realistic fallback or csv content
-        const nameClean = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ");
-        let wordAccent = "Agreste";
-        if (nameClean.toLowerCase().includes("mercado")) wordAccent = "Silva";
-        else if (nameClean.toLowerCase().includes("posto")) wordAccent = "Nunes";
-        else if (nameClean.toLowerCase().includes("clinica")) wordAccent = "Moisés";
-        
-        const presetClients = [
-          {
-            name: `Comercial ${wordAccent} de Bebidas`,
-            city: 'Caruaru',
-            responsible: 'Gil Silva',
-            phone: '(81) 98111-2030',
-            size: 'grande' as const
-          },
-          {
-            name: `Clínica de Saúde Sanar`,
-            city: 'Bezerros',
-            responsible: 'Dr. Lucas Ribeiro',
-            phone: '(81) 99123-5678',
-            size: 'pequeno' as const
-          }
-        ];
-        
-        if (fileExt === 'csv' || fileExt === 'txt') {
+    setImportProgressText('Lendo arquivo e calculando estrutura...');
+    
+    try {
+      let extractedText = '';
+      
+      if (fileExt === 'csv' || fileExt === 'txt') {
+        extractedText = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = (event) => {
-            try {
-              const text = event.target?.result as string;
-              const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-              const customClients: typeof presetClients = [];
-              
-              const startIndex = (lines[0]?.toLowerCase().includes('nome') || lines[0]?.toLowerCase().includes('cliente')) ? 1 : 0;
-              
-              for (let i = startIndex; i < Math.min(lines.length, 10); i++) {
-                const parts = lines[i].split(/[,;]/);
-                if (parts[0]) {
-                  customClients.push({
-                    name: parts[0]?.trim() || `Cliente Extraído ${i}`,
-                    city: parts[1]?.trim() || 'Caruaru',
-                    responsible: parts[2]?.trim() || 'Coordenador',
-                    phone: parts[3]?.trim() || '(81) 99000-0000',
-                    size: 'grande'
-                  });
-                }
-              }
-              
-              if (customClients.length > 0) {
-                setImportedClients(customClients);
-              } else {
-                setImportedClients(presetClients);
-              }
-            } catch (err) {
-              setImportedClients(presetClients);
-            }
-            setImportStep('review');
-          };
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = () => reject(new Error('Erro ao ler arquivo de texto.'));
           reader.readAsText(file);
-        } else {
-          setImportedClients(presetClients);
-          setImportStep('review');
-        }
+        });
+      } else if (fileExt === 'xlsx' || fileExt === 'xls' || fileExt === 'xltx') {
+        setImportProgressText('Analisando planilhas Excel (SheetJS)...');
+        extractedText = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const data = new Uint8Array(e.target?.result as ArrayBuffer);
+              const workbook = XLSX.read(data, { type: 'array' });
+              let textResult = '';
+              workbook.SheetNames.forEach((sheetName) => {
+                const worksheet = workbook.Sheets[sheetName];
+                // Convert sheets to CSV format to preserve compact tab structure for Gemini
+                const csv = XLSX.utils.sheet_to_csv(worksheet);
+                textResult += `--- Planilha: ${sheetName} ---\n${csv}\n\n`;
+              });
+              resolve(textResult);
+            } catch (err) {
+              reject(err);
+            }
+          };
+          reader.onerror = () => reject(new Error('Erro ao ler arquivo Excel.'));
+          reader.readAsArrayBuffer(file);
+        });
+      } else if (fileExt === 'docx') {
+        setImportProgressText('Extraindo conteúdos do documento Word (Mammoth)...');
+        extractedText = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            try {
+              const arrayBuffer = e.target?.result as ArrayBuffer;
+              const result = await mammoth.extractRawText({ arrayBuffer });
+              resolve(result.value);
+            } catch (err) {
+              reject(err);
+            }
+          };
+          reader.onerror = () => reject(new Error('Erro ao ler arquivo Word.'));
+          reader.readAsArrayBuffer(file);
+        });
+      } else if (fileExt === 'pdf') {
+        setImportProgressText('Iniciando extração textual e processamento OCR do PDF (PDF.js)...');
+        extractedText = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            try {
+              const arrayBuffer = e.target?.result as ArrayBuffer;
+              
+              if (!(window as any).pdfjsLib) {
+                await new Promise<void>((res, rej) => {
+                  const script = document.createElement('script');
+                  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                  script.onload = () => res();
+                  script.onerror = () => rej(new Error('Falha ao carregar motor PDF.js de CDN.'));
+                  document.head.appendChild(script);
+                });
+              }
+              
+              const pdfjsLib = (window as any).pdfjsLib;
+              pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+              
+              const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+              let textResult = '';
+              
+              for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map((item: any) => item.str).join(' ');
+                textResult += `--- Página ${i} ---\n${pageText}\n\n`;
+              }
+              
+              resolve(textResult);
+            } catch (err) {
+              reject(err);
+            }
+          };
+          reader.onerror = () => reject(new Error('Erro ao ler arquivo PDF.'));
+          reader.readAsArrayBuffer(file);
+        });
+      } else {
+        throw new Error(`O formato de arquivo .${fileExt} não é suportado pelo importador qualificado.`);
       }
-    }, 800);
+
+      setImportProgressText('Usando IA Gemini para mapear e formatar com 100% de exatidão...');
+      
+      const response = await fetch('/api/extract-clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileText: extractedText,
+          fileName: file.name,
+          fileExt: fileExt,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido na requisição de IA.' }));
+        throw new Error(errorData.error || 'Falha na resposta do servidor de IA.');
+      }
+
+      const responseData = await response.json();
+      
+      if (responseData.success && Array.isArray(responseData.clients)) {
+        setImportedClients(responseData.clients);
+        setImportStep('review');
+        showToast(`Sucesso! Detectamos ${responseData.clients.length} clientes prontos para revisão de cadastro.`, 'success');
+      } else {
+        throw new Error('Retorno do servidor de extração inválido ou malformado.');
+      }
+
+    } catch (err: any) {
+      console.error('[Import Error]', err);
+      showToast(err.message || 'Falha ao realizar a importação automática do arquivo.', 'error');
+      setImportStep('idle');
+      setImportingFile(null);
+    }
   };
 
   const handleConfirmImport = () => {
@@ -168,7 +216,25 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
       return;
     }
 
-    importedClients.forEach(client => {
+    const validClients = importedClients.filter((client, idx) => {
+      const inDb = clients.some(c => 
+        c.name.trim().toLowerCase() === client.name.trim().toLowerCase() && 
+        c.city.trim().toLowerCase() === client.city.trim().toLowerCase()
+      );
+      const inImportList = importedClients.some((other, oIdx) => 
+        oIdx < idx && 
+        other.name.trim().toLowerCase() === client.name.trim().toLowerCase() && 
+        other.city.trim().toLowerCase() === client.city.trim().toLowerCase()
+      );
+      return !inDb && !inImportList;
+    });
+
+    if (validClients.length === 0) {
+      showToast('Nenhum novo cliente para cadastrar. Todos os registros já existem ou são duplicados.', 'error');
+      return;
+    }
+
+    validClients.forEach(client => {
       AGRESTE_DB.addClient({
         name: client.name,
         city: client.city,
@@ -179,7 +245,13 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
       });
     });
 
-    showToast(`${importedClients.length} clientes importados e inseridos no banco via "${importingFile?.name}"!`, 'success');
+    const skippedCount = importedClients.length - validClients.length;
+    if (skippedCount > 0) {
+      showToast(`${validClients.length} clientes novos importados com sucesso! ${skippedCount} repetidos foram pulados automaticamente.`, 'success');
+    } else {
+      showToast(`${validClients.length} clientes cadastrados com sucesso via "${importingFile?.name}"!`, 'success');
+    }
+
     setShowImportModal(false);
     setImportingFile(null);
     setImportStep('idle');
@@ -1426,7 +1498,7 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
                   <div className="border border-dashed border-zinc-850 dark:border-zinc-805 rounded-2xl p-8 hover:border-[#D35400] transition-colors cursor-pointer relative text-center group">
                     <input
                       type="file"
-                      accept=".xlsx,.xls,.doc,.docx,.pdf,.csv,.txt"
+                      accept=".xlsx,.xls,.xltx,.doc,.docx,.pdf,.csv,.txt"
                       onChange={handleFileChange}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />
@@ -1436,7 +1508,7 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
                       </div>
                       <div>
                         <p className="text-sm font-bold">Arraste ou clique para selecionar o arquivo</p>
-                        <p className="text-xs text-zinc-500 mt-1">Excel (.xlsx, .xls, .csv), Word (.docx) ou PDF (.pdf)</p>
+                        <p className="text-xs text-zinc-500 mt-1">Excel (.xlsx, .xls, .xltx, .csv), Word (.docx) ou PDF (.pdf)</p>
                       </div>
                     </div>
                   </div>
@@ -1444,7 +1516,7 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
                   <div className="p-4 bg-zinc-950/40 rounded-xl border border-zinc-850 text-xs space-y-2 text-left">
                     <p className="font-bold text-[#D35400] uppercase text-[10px] tracking-wider">Instruções para Importação:</p>
                     <ul className="list-disc pl-4 space-y-1 text-zinc-400 font-sans text-[11px] leading-relaxed">
-                      <li><strong>Excel/CSV</strong>: Organize a planilha com colunas representativas (Ex: Nome, Cidade, Responsável, Telefone).</li>
+                      <li><strong>Excel (.xlsx, .xltx, .xls)/CSV</strong>: Organize a planilha com colunas representativas (Ex: Nome, Cidade, Responsável, Telefone).</li>
                       <li><strong>PDF e Word</strong>: O sistema executará varredura OCR para extrair as frentes cadastrais principais presentes nos parágrafos e tabelas.</li>
                       <li>Você poderá editar e validar todos os dados de forma visual e segura antes de confirmar a gravação.</li>
                     </ul>
@@ -1477,6 +1549,31 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
                     </span>
                   </div>
 
+                  {/* Warning banner when duplicates are present */}
+                  {importedClients.some((client, idx) => {
+                    const isDbDup = clients.some(c => 
+                      c.name.trim().toLowerCase() === client.name.trim().toLowerCase() && 
+                      c.city.trim().toLowerCase() === client.city.trim().toLowerCase()
+                    );
+                    const isFileDup = importedClients.some((other, oIdx) => 
+                      oIdx < idx && 
+                      other.name.trim().toLowerCase() === client.name.trim().toLowerCase() && 
+                      other.city.trim().toLowerCase() === client.city.trim().toLowerCase()
+                    );
+                    return isDbDup || isFileDup;
+                  }) && (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-500 dark:text-amber-400 rounded-xl text-xs flex gap-2.5 items-start text-left leading-relaxed">
+                      <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0 animate-pulse" />
+                      <div className="space-y-0.5">
+                        <p className="font-bold">Registros Repetidos Identificados</p>
+                        <p className="text-zinc-400 text-[11px]">
+                          Para evitar duplicidade, cadastros destacados com a mesma combinação de <strong>Nome</strong> e <strong>Cidade</strong> já salvos no sistema ou repetidos no arquivo serão <strong>ignorados na importação</strong>. 
+                          Se desejar cadastrá-los como pontos diferentes, basta alterar o Nome ou Cidade de exibição na tabela abaixo.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Review Table Editor */}
                   <div className="border border-zinc-805 dark:border-zinc-850 rounded-xl overflow-hidden text-left bg-zinc-950/25">
                     <table className="w-full text-xs">
@@ -1490,72 +1587,106 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
                         </tr>
                       </thead>
                       <tbody>
-                        {importedClients.map((client, idx) => (
-                          <tr key={idx} className="border-b border-zinc-805 dark:border-zinc-900 last:border-b-0 hover:bg-zinc-900/30">
-                            <td className="p-1 px-1.5">
-                              <input
-                                type="text"
-                                value={client.name}
-                                onChange={(e) => {
-                                  const updated = [...importedClients];
-                                  updated[idx].name = e.target.value;
-                                  setImportedClients(updated);
-                                }}
-                                className="w-full p-1 bg-transparent border-0 outline-none hover:bg-zinc-800/40 rounded focus:bg-zinc-800 font-bold text-white"
-                              />
-                            </td>
-                            <td className="p-1 px-1.5">
-                              <input
-                                type="text"
-                                value={client.city}
-                                onChange={(e) => {
-                                  const updated = [...importedClients];
-                                  updated[idx].city = e.target.value;
-                                  setImportedClients(updated);
-                                }}
-                                className="w-full p-1 bg-transparent border-0 outline-none hover:bg-zinc-800/40 rounded focus:bg-zinc-800 text-white"
-                              />
-                            </td>
-                            <td className="p-1 px-1.5">
-                              <input
-                                type="text"
-                                value={client.responsible}
-                                onChange={(e) => {
-                                  const updated = [...importedClients];
-                                  updated[idx].responsible = e.target.value;
-                                  setImportedClients(updated);
-                                }}
-                                className="w-full p-1 bg-transparent border-0 outline-none hover:bg-zinc-800/40 rounded focus:bg-zinc-800 text-white"
-                              />
-                            </td>
-                            <td className="p-1 px-1.5">
-                              <input
-                                type="text"
-                                value={client.phone}
-                                onChange={(e) => {
-                                  const updated = [...importedClients];
-                                  updated[idx].phone = e.target.value;
-                                  setImportedClients(updated);
-                                }}
-                                className="w-full p-1 bg-transparent border-0 outline-none hover:bg-zinc-800/40 rounded focus:bg-zinc-800 font-mono text-white"
-                              />
-                            </td>
-                            <td className="p-1 px-1.5 text-center">
-                              <select
-                                value={client.size}
-                                onChange={(e) => {
-                                  const updated = [...importedClients];
-                                  updated[idx].size = e.target.value as any;
-                                  setImportedClients(updated);
-                                }}
-                                className="p-1 bg-transparent border-0 outline-none hover:bg-zinc-800/40 rounded focus:bg-zinc-800 text-[10px] uppercase font-bold text-white"
-                              >
-                                <option value="grande">Grande</option>
-                                <option value="pequeno">Pequeno</option>
-                              </select>
-                            </td>
-                          </tr>
-                        ))}
+                        {importedClients.map((client, idx) => {
+                          const isDbDup = clients.some(c => 
+                            c.name.trim().toLowerCase() === client.name.trim().toLowerCase() && 
+                            c.city.trim().toLowerCase() === client.city.trim().toLowerCase()
+                          );
+                          const isFileDup = importedClients.some((other, oIdx) => 
+                            oIdx < idx && 
+                            other.name.trim().toLowerCase() === client.name.trim().toLowerCase() && 
+                            other.city.trim().toLowerCase() === client.city.trim().toLowerCase()
+                          );
+                          const isDup = isDbDup || isFileDup;
+
+                          return (
+                            <tr 
+                              key={idx} 
+                              className={`border-b transition-colors ${
+                                isDup 
+                                  ? 'bg-amber-500/10 border-l-2 border-l-amber-500 border-b-zinc-800 hover:bg-amber-500/15' 
+                                  : 'border-b-zinc-805 dark:border-zinc-900 last:border-b-0 hover:bg-zinc-900/30'
+                              }`}
+                            >
+                              <td className="p-1 px-1.5">
+                                <div className="flex flex-col">
+                                  <input
+                                    type="text"
+                                    value={client.name}
+                                    onChange={(e) => {
+                                      const updated = [...importedClients];
+                                      updated[idx].name = e.target.value;
+                                      setImportedClients(updated);
+                                    }}
+                                    className={`w-full p-1 bg-transparent border-0 outline-none hover:bg-zinc-800/40 rounded focus:bg-zinc-800 font-bold ${
+                                      isDup ? 'text-amber-500' : 'text-white'
+                                    }`}
+                                  />
+                                  {isDbDup && (
+                                    <span className="text-[9px] font-semibold text-amber-500 px-1 mt-0.5 flex items-center gap-1">
+                                      <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" /> Já Cadastrado (será ignorado)
+                                    </span>
+                                  )}
+                                  {!isDbDup && isFileDup && (
+                                    <span className="text-[9px] font-semibold text-amber-500 px-1 mt-0.5 flex items-center gap-1">
+                                      <AlertCircle className="w-3 h-3 text-amber-500 shrink-0" /> Repetido no Arquivo (será ignorado)
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-1 px-1.5">
+                                <input
+                                  type="text"
+                                  value={client.city}
+                                  onChange={(e) => {
+                                    const updated = [...importedClients];
+                                    updated[idx].city = e.target.value;
+                                    setImportedClients(updated);
+                                  }}
+                                  className="w-full p-1 bg-transparent border-0 outline-none hover:bg-zinc-800/40 rounded focus:bg-zinc-800 text-white font-medium"
+                                />
+                              </td>
+                              <td className="p-1 px-1.5">
+                                <input
+                                  type="text"
+                                  value={client.responsible}
+                                  onChange={(e) => {
+                                    const updated = [...importedClients];
+                                    updated[idx].responsible = e.target.value;
+                                    setImportedClients(updated);
+                                  }}
+                                  className="w-full p-1 bg-transparent border-0 outline-none hover:bg-zinc-800/40 rounded focus:bg-zinc-800 text-white"
+                                />
+                              </td>
+                              <td className="p-1 px-1.5">
+                                <input
+                                  type="text"
+                                  value={client.phone}
+                                  onChange={(e) => {
+                                    const updated = [...importedClients];
+                                    updated[idx].phone = e.target.value;
+                                    setImportedClients(updated);
+                                  }}
+                                  className="w-full p-1 bg-transparent border-0 outline-none hover:bg-zinc-800/40 rounded focus:bg-zinc-800 font-mono text-white"
+                                />
+                              </td>
+                              <td className="p-1 px-1.5 text-center">
+                                <select
+                                  value={client.size}
+                                  onChange={(e) => {
+                                    const updated = [...importedClients];
+                                    updated[idx].size = e.target.value as any;
+                                    setImportedClients(updated);
+                                  }}
+                                  className="p-1 bg-transparent border-0 outline-none hover:bg-zinc-800/40 rounded focus:bg-zinc-800 text-[10px] uppercase font-bold text-white cursor-pointer"
+                                >
+                                  <option value="grande">Grande</option>
+                                  <option value="pequeno">Pequeno</option>
+                                </select>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
