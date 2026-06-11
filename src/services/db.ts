@@ -254,7 +254,27 @@ export class AGRESTE_DB {
   // --- Clients CRUD ---
   static getClients(): Client[] {
     const clients = this.get<Client[]>('clients', SEED_CLIENTS);
-    return [...clients].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR', { sensitivity: 'base' }));
+    
+    // Automatic on-the-fly self-healing of any duplicate IDs
+    const seenIds = new Set<string>();
+    let hasDuplicates = false;
+    
+    const healedClients = clients.map((client) => {
+      if (!client.id || seenIds.has(client.id)) {
+        hasDuplicates = true;
+        const newId = `cli-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        seenIds.add(newId);
+        return { ...client, id: newId };
+      }
+      seenIds.add(client.id);
+      return client;
+    });
+
+    if (hasDuplicates) {
+      this.set('clients', healedClients);
+    }
+
+    return [...healedClients].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR', { sensitivity: 'base' }));
   }
 
   static addClient(client: Omit<Client, 'id' | 'createdAt' | 'code'>): Client {

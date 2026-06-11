@@ -530,24 +530,6 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
             </select>
           </div>
 
-          {/* Status Pagamento Select Filter */}
-          <div className="w-full md:w-44 select-container">
-            <select
-              value={selectedPaymentStatus}
-              onChange={(e) => setSelectedPaymentStatus(e.target.value as any)}
-              id="filter-client-payment"
-              className={`w-full py-2 px-3 rounded-lg border text-xs outline-none transition-all ${
-                theme === 'dark'
-                  ? 'bg-zinc-950 border-[#242424] text-zinc-300 focus:border-[#D35400]'
-                  : 'bg-white border-zinc-200 text-zinc-700 focus:border-[#D35400] shadow-sm'
-              }`}
-            >
-              <option value="todos">Faturamento: Todos</option>
-              <option value="pago">Pago</option>
-              <option value="pendente">Pendente</option>
-            </select>
-          </div>
-
           {/* Cidade Select Filter */}
           <div className="w-full md:w-52 select-container">
             <select
