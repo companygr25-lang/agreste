@@ -65,7 +65,7 @@ export default function App() {
     // 3. Auth sync
     const savedUser = localStorage.getItem('agreste_logged_user');
     if (savedUser) {
-      setCurrentUser(savedUser);
+      setCurrentUser(savedUser.toLowerCase().trim());
     }
 
     const savedClient = localStorage.getItem('agreste_logged_client');
@@ -123,8 +123,9 @@ export default function App() {
   };
 
   const handleLoginSuccess = (username: string) => {
-    localStorage.setItem('agreste_logged_user', username);
-    setCurrentUser(username);
+    const normalized = username.toLowerCase().trim();
+    localStorage.setItem('agreste_logged_user', normalized);
+    setCurrentUser(normalized);
     refreshAllData();
   };
 
@@ -200,7 +201,7 @@ export default function App() {
   }
 
   const userDetails = AGRESTE_DB.getUserDetails();
-  const currentDetails = currentUser ? userDetails[currentUser.toLowerCase()] : null;
+  const currentDetails = currentUser ? userDetails[currentUser.toLowerCase().trim()] : null;
   const canEditState = currentDetails ? currentDetails.canEditData !== false : true;
 
   return (
@@ -308,6 +309,7 @@ export default function App() {
                 <GerenciaTab
                   theme={theme}
                   showToast={showToast}
+                  canEdit={canEditState}
                 />
               )}
 

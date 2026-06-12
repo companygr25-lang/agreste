@@ -74,6 +74,10 @@ export default function SettingsTab({
   };
 
   const handleSaveUserConfig = () => {
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para alterar configurações de licenças.', 'error');
+      return;
+    }
     if (!selectedUser) {
       showToast('Selecione um usuário para configurar.', 'error');
       return;
@@ -93,6 +97,10 @@ export default function SettingsTab({
   };
 
   const handleSaveLicenses = () => {
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para alterar licenças.', 'error');
+      return;
+    }
     if (licenses < 1) {
       showToast('O número de licenças deve ser no mínimo 1.', 'error');
       return;
@@ -112,6 +120,10 @@ export default function SettingsTab({
   // Add a reminder
   const handleAddReminder = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para adicionar lembretes.', 'error');
+      return;
+    }
     if (!newTitle.trim() || !newTime) {
       showToast('Preencha a descrição do lembrete e o horário.', 'error');
       return;
@@ -130,6 +142,10 @@ export default function SettingsTab({
 
   // Toggle completed state on reminder
   const handleToggleReminder = (id: string, title: string) => {
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para alterar lembretes.', 'error');
+      return;
+    }
     AGRESTE_DB.toggleReminder(id);
     showToast(`Demanda "${title}" atualizada.`, 'info');
     onRefreshData();
@@ -137,6 +153,10 @@ export default function SettingsTab({
 
   // Delete reminder
   const handleDeleteReminder = (id: string, title: string) => {
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para remover lembretes.', 'error');
+      return;
+    }
     AGRESTE_DB.deleteReminder(id);
     showToast(`Agenda de "${title}" removida.`, 'success');
     onRefreshData();
@@ -155,7 +175,10 @@ export default function SettingsTab({
     }, 1200);
   };
 
-  const isProvider = currentUser?.toLowerCase() === 'gil silva';
+  const loggedUserDetails = currentUser ? AGRESTE_DB.getUserDetails()[currentUser.toLowerCase().trim()] : null;
+  const canEdit = loggedUserDetails ? loggedUserDetails.canEditData !== false : true;
+
+  const isProvider = currentUser?.toLowerCase().trim() === 'gil silva';
 
   if (isProvider) {
     return (

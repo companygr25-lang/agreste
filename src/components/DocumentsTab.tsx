@@ -62,6 +62,11 @@ export default function DocumentsTab({
   const handleSaveDoc = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para cadastrar ou editar documentos.', 'error');
+      return;
+    }
+
     if (!docName.trim() || !docDate || !docNextUpdate) {
       showToast('Por favor, indique o nome do documento e as respectivas datas.', 'error');
       return;
@@ -390,6 +395,10 @@ export default function DocumentsTab({
                 <button
                   type="button"
                   onClick={() => {
+                    if (!canEdit) {
+                      showToast('Acesso apenas leitura: você não tem permissão para remover documentos.', 'error');
+                      return;
+                    }
                     AGRESTE_DB.deleteDocument(deleteConfirm.id);
                     showToast(`Certificação "${deleteConfirm.name}" removida com sucesso.`, 'success');
                     setDeleteConfirm(null);

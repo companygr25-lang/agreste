@@ -15,9 +15,10 @@ import { ManagerTask, WeekdayUnion } from '../types';
 interface GerenciaTabProps {
   theme: 'light' | 'dark';
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
+  canEdit?: boolean;
 }
 
-export default function GerenciaTab({ theme, showToast }: GerenciaTabProps) {
+export default function GerenciaTab({ theme, showToast, canEdit = true }: GerenciaTabProps) {
   const [tasks, setTasks] = useState<ManagerTask[]>([]);
   const [selectedDay, setSelectedDay] = useState<WeekdayUnion>('Segunda');
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,6 +51,10 @@ export default function GerenciaTab({ theme, showToast }: GerenciaTabProps) {
 
   // Helper: toggle task completion
   const handleToggleTask = (taskId: string) => {
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para alterar tarefas.', 'error');
+      return;
+    }
     const updated = tasks.map(t => {
       if (t.id === taskId) {
         const nextStatus = !t.completed;
@@ -67,6 +72,10 @@ export default function GerenciaTab({ theme, showToast }: GerenciaTabProps) {
   // Helper: add custom task
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para adicionar tarefas.', 'error');
+      return;
+    }
     if (!newTitle.trim()) {
       showToast('O título da tarefa não pode estar vazio.', 'error');
       return;
@@ -98,6 +107,10 @@ export default function GerenciaTab({ theme, showToast }: GerenciaTabProps) {
 
   // Execute Delete
   const executeDelete = (taskId: string) => {
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para excluir tarefas.', 'error');
+      return;
+    }
     const updated = tasks.filter(t => t.id !== taskId);
     saveTasksState(updated);
     showToast('Tarefa excluída permanentemente.', 'info');
@@ -129,6 +142,10 @@ export default function GerenciaTab({ theme, showToast }: GerenciaTabProps) {
 
   // Execute Edit
   const executeEdit = (updatedTask: ManagerTask) => {
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para editar tarefas.', 'error');
+      return;
+    }
     const updated = tasks.map(t => t.id === updatedTask.id ? updatedTask : t);
     saveTasksState(updated);
     showToast('Tarefa atualizada com sucesso!', 'success');
@@ -146,6 +163,10 @@ export default function GerenciaTab({ theme, showToast }: GerenciaTabProps) {
 
   // Execute Reset
   const executeReset = () => {
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para reiniciar tarefas.', 'error');
+      return;
+    }
     const updated = tasks.map(t => ({ ...t, completed: false }));
     saveTasksState(updated);
     showToast('Lista de afazeres reiniciada com sucesso.', 'success');

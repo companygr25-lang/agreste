@@ -311,6 +311,10 @@ export default function ClientsTab({
   // Handle addition of a client
   const handleAddClient = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para cadastrar clientes.', 'error');
+      return;
+    }
     if (!clientName.trim() || !clientCity.trim() || !clientResponsible.trim()) {
       showToast('Por favor, preencha todos os campos do cliente.', 'error');
       return;
@@ -342,6 +346,10 @@ export default function ClientsTab({
 
   // Toggle payment status from list directly
   const handleTogglePayment = (client: Client) => {
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não pode alterar as informações de pagamento.', 'error');
+      return;
+    }
     const nextStatus: PaymentStatus = client.paymentStatus === 'pago' ? 'pendente' : 'pago';
     const updated = { ...client, paymentStatus: nextStatus };
     AGRESTE_DB.updateClient(updated);
@@ -356,6 +364,10 @@ export default function ClientsTab({
 
   // Confirm pending client registration from chatbot signup
   const handleConfirmClient = (client: Client) => {
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não pode aprovar cadastros.', 'error');
+      return;
+    }
     const updated = { ...client, isPendingConfirmation: false };
     AGRESTE_DB.updateClient(updated);
     if (onRefreshData) {
@@ -401,6 +413,10 @@ export default function ClientsTab({
 
   const handleConfirmEditSave = () => {
     if (!showEditConfirm) return;
+    if (!canModifyItem(showEditConfirm.original.createdBy)) {
+      showToast('Nível de permissão insuficiente para alterar este cliente.', 'error');
+      return;
+    }
     AGRESTE_DB.updateClient(showEditConfirm.updated);
     showToast(`Cliente "${showEditConfirm.updated.name}" atualizado com sucesso!`, 'success');
     setShowEditConfirm(null);
@@ -429,6 +445,10 @@ export default function ClientsTab({
   const handleSaveVisitReport = (e: React.FormEvent) => {
     e.preventDefault();
     if (!showVisitModal) return;
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para registrar relatórios de visita.', 'error');
+      return;
+    }
 
     AGRESTE_DB.addReport({
       clientId: showVisitModal.id,
@@ -1244,6 +1264,11 @@ export default function ClientsTab({
                 <button
                   type="button"
                   onClick={() => {
+                    const clientToDelete = clients.find(c => c.id === deleteConfirm.id);
+                    if (!canModifyItem(clientToDelete?.createdBy)) {
+                      showToast('Nível de permissão insuficiente para excluir este cliente.', 'error');
+                      return;
+                    }
                     AGRESTE_DB.deleteClient(deleteConfirm.id);
                     showToast(`Cliente "${deleteConfirm.name}" excluído.`, 'success');
                     setDeleteConfirm(null);

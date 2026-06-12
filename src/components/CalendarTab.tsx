@@ -108,6 +108,10 @@ export default function CalendarTab({
     }
 
     if (editingEvent) {
+      if (!canModifyItem(editingEvent.createdBy)) {
+        showToast('Nível de permissão insuficiente para editar este cronograma.', 'error');
+        return;
+      }
       // update
       AGRESTE_DB.updateCalendarEvent({
         id: editingEvent.id,
@@ -122,6 +126,10 @@ export default function CalendarTab({
       });
       showToast(`Cronograma de "${finalClientName}" atualizado com sucesso.`, 'success');
     } else {
+      if (!canEdit) {
+        showToast('Acesso apenas leitura: você não tem permissão para cadastrar cronogramas.', 'error');
+        return;
+      }
       // create
       AGRESTE_DB.addCalendarEvent({
         clientId: selectedClientId,
@@ -512,6 +520,11 @@ export default function CalendarTab({
                 <button
                   type="button"
                   onClick={() => {
+                    const eventToDelete = calendarEvents.find(e => e.id === deleteConfirm.id);
+                    if (!canModifyItem(eventToDelete?.createdBy)) {
+                      showToast('Nível de permissão insuficiente para excluir este cronograma.', 'error');
+                      return;
+                    }
                     AGRESTE_DB.deleteCalendarEvent(deleteConfirm.id);
                     showToast(`Cronograma de "${deleteConfirm.name}" removido com sucesso.`, 'success');
                     setDeleteConfirm(null);

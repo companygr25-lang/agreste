@@ -630,6 +630,11 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
                 <button
                   type="button"
                   onClick={() => {
+                    const reportToDelete = reports.find(r => r.id === deleteConfirm.id);
+                    if (!canModifyItem(reportToDelete?.createdBy)) {
+                      showToast('Nível de permissão insuficiente para excluir este relatório.', 'error');
+                      return;
+                    }
                     AGRESTE_DB.deleteReport(deleteConfirm.id);
                     showToast(`Relatório de "${deleteConfirm.name}" excluído.`, 'success');
                     setDeleteConfirm(null);
