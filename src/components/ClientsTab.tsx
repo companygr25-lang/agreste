@@ -21,10 +21,33 @@ interface ClientsTabProps {
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   onRefreshData: () => void;
   canEdit?: boolean;
+  currentUser?: string;
 }
 
-export default function ClientsTab({ theme, clients, showToast, onRefreshData, canEdit = true }: ClientsTabProps) {
+export default function ClientsTab({ 
+  theme, 
+  clients, 
+  showToast, 
+  onRefreshData, 
+  canEdit = true,
+  currentUser
+}: ClientsTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Find current user's role and edit level
+  const userDetails = AGRESTE_DB.getUserDetails();
+  const currentDetails = currentUser ? userDetails[currentUser.toLowerCase().trim()] : null;
+  const isManager = !currentUser || 
+                    currentUser.toLowerCase().trim() === 'gil silva' || 
+                    currentDetails?.cargo === 'gerente' || 
+                    currentDetails?.cargo === 'supervisor de operações';
+
+  const canModifyItem = (itemCreatorUsername?: string) => {
+    if (!canEdit) return false;
+    if (isManager) return true;
+    if (!itemCreatorUsername) return true; // old items can be edited by any tech
+    return itemCreatorUsername.toLowerCase().trim() === currentUser?.toLowerCase().trim();
+  };
   
   // Custom filter states
   const [selectedSize, setSelectedSize] = useState<'todos' | 'grande' | 'pequeno'>('todos');
@@ -241,7 +264,9 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
         responsible: client.responsible,
         phone: client.phone,
         size: client.size,
-        paymentStatus: 'pago'
+        paymentStatus: 'pago',
+        createdBy: currentUser?.toLowerCase().trim(),
+        createdBy_name: currentDetails?.name || currentUser
       });
     });
 
@@ -298,6 +323,8 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
       phone: clientPhone,
       paymentStatus: clientPaymentStatus,
       size: clientSize,
+      createdBy: currentUser?.toLowerCase().trim(),
+      createdBy_name: currentDetails?.name || currentUser
     });
 
     showToast(`Cliente "${clientName}" cadastrado com sucesso!`, 'success');
@@ -417,6 +444,8 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
       satisfaction: satisfaction,
       comments: comments,
       referrals: referrals,
+      createdBy: currentUser?.toLowerCase().trim(),
+      createdBy_name: currentDetails?.name || currentUser
     });
 
     showToast(`Relatório de visita para "${showVisitModal.name}" finalizado e arquivado!`, 'success');
@@ -645,6 +674,14 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
                         <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-[#D35400]" /> Contato: {client.phone}</span>
                       </>
                     )}
+                    {client.createdBy_name && (
+                      <>
+                        <span className="text-zinc-650">•</span>
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-[#E67E22] bg-[#D35400]/10 px-1.5 py-0.5 rounded-md border border-[#D35400]/10">
+                          Técnico: {client.createdBy_name}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -669,7 +706,7 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
                       <ClipboardList className="w-4 h-4 text-[#D35400] hover:text-white" /> <span>Realizar Visita</span>
                     </button>
                   )}
-                  {canEdit && (
+                  {canModifyItem(client.createdBy) && (
                     <button
                       onClick={() => openEditModal(client)}
                       className="p-2 hover:bg-[#D35400]/15 text-zinc-500 hover:text-[#D35400] rounded-xl transition-colors cursor-pointer"
@@ -678,7 +715,7 @@ export default function ClientsTab({ theme, clients, showToast, onRefreshData, c
                       <Edit className="w-4.5 h-4.5" />
                     </button>
                   )}
-                  {canEdit && (
+                  {canModifyItem(client.createdBy) && (
                     <button
                       onClick={() => handleDeleteClient(client.id, client.name)}
                       className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded-xl transition-colors cursor-pointer"

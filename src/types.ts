@@ -40,6 +40,8 @@ export interface Client {
   isPendingConfirmation?: boolean;
   billingValue?: number;
   dueDay?: number;
+  createdBy?: string;
+  createdBy_name?: string;
 }
 
 export interface PestControl {
@@ -65,6 +67,8 @@ export interface VisitReport {
   comments: string;
   referrals: string; // indicações
   createdAt: string;
+  createdBy?: string;
+  createdBy_name?: string;
 }
 
 export interface LargeClientActivity {
@@ -75,6 +79,8 @@ export interface LargeClientActivity {
   visitDate: string; // actual date of visit
   observations: string;
   situation: 'antes_prazo' | 'no_prazo' | 'atrasado' | 'pendente';
+  createdBy?: string;
+  createdBy_name?: string;
 }
 
 export interface CompanyDocument {

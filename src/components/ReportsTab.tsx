@@ -18,9 +18,24 @@ interface ReportsTabProps {
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   onRefreshData: () => void;
   canEdit?: boolean;
+  currentUser?: string;
 }
 
-export default function ReportsTab({ theme, reports, showToast, onRefreshData, canEdit = true }: ReportsTabProps) {
+export default function ReportsTab({ theme, reports, showToast, onRefreshData, canEdit = true, currentUser }: ReportsTabProps) {
+  // Find current user's role and edit level
+  const userDetails = AGRESTE_DB.getUserDetails();
+  const currentDetails = currentUser ? userDetails[currentUser.toLowerCase().trim()] : null;
+  const isManager = !currentUser || 
+                    currentUser.toLowerCase().trim() === 'gil silva' || 
+                    currentDetails?.cargo === 'gerente' || 
+                    currentDetails?.cargo === 'supervisor de operações';
+
+  const canModifyItem = (itemCreatorUsername?: string) => {
+    if (!canEdit) return false;
+    if (isManager) return true;
+    if (!itemCreatorUsername) return true; // old reports are editable by any tech
+    return itemCreatorUsername.toLowerCase().trim() === currentUser?.toLowerCase().trim();
+  };
   // Filter states
   const [filterClient, setFilterClient] = useState('');
   const [filterCity, setFilterCity] = useState('');
@@ -555,7 +570,7 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
                   >
                     <Download className="w-3.5 h-3.5" /> Baixar PDF
                   </button>
-                  {canEdit && (
+                  {canModifyItem(rep.createdBy) && (
                     <button
                       onClick={() => handleDeleteReport(rep.id, rep.clientName, rep.date)}
                       id={`delete-rep-${rep.id}`}

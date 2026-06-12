@@ -19,11 +19,27 @@ interface CalendarTabProps {
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   onRefreshData: () => void;
   canEdit?: boolean;
+  currentUser?: string;
 }
 
 export default function CalendarTab({ 
-  theme, calendarEvents, clients, showToast, onRefreshData, canEdit = true 
+  theme, calendarEvents, clients, showToast, onRefreshData, canEdit = true, currentUser 
 }: CalendarTabProps) {
+  // Find current user's role and edit level
+  const userDetails = AGRESTE_DB.getUserDetails();
+  const currentDetails = currentUser ? userDetails[currentUser.toLowerCase().trim()] : null;
+  const isManager = !currentUser || 
+                    currentUser.toLowerCase().trim() === 'gil silva' || 
+                    currentDetails?.cargo === 'gerente' || 
+                    currentDetails?.cargo === 'supervisor de operações';
+
+  const canModifyItem = (itemCreatorUsername?: string) => {
+    if (!canEdit) return false;
+    if (isManager) return true;
+    if (!itemCreatorUsername) return true; // old calendar events are editable by any tech
+    return itemCreatorUsername.toLowerCase().trim() === currentUser?.toLowerCase().trim();
+  };
+
   const [showEventModal, setShowEventModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<LargeClientActivity | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
@@ -101,6 +117,8 @@ export default function CalendarTab({
         visitDate,
         observations,
         situation,
+        createdBy: editingEvent.createdBy,
+        createdBy_name: editingEvent.createdBy_name,
       });
       showToast(`Cronograma de "${finalClientName}" atualizado com sucesso.`, 'success');
     } else {
@@ -112,6 +130,8 @@ export default function CalendarTab({
         visitDate,
         observations,
         situation,
+        createdBy: currentUser?.toLowerCase().trim(),
+        createdBy_name: currentDetails?.name || currentUser,
       });
       showToast(`Acompanhamento de grande porte criado para "${finalClientName}".`, 'success');
     }
@@ -199,7 +219,7 @@ export default function CalendarTab({
                         {event.clientName}
                       </h3>
                     </div>
-                    {canEdit && (
+                    {canModifyItem(event.createdBy) && (
                       <div className="flex gap-1">
                         <button
                           onClick={() => handleOpenEditEvent(event)}
@@ -248,7 +268,14 @@ export default function CalendarTab({
 
                 {/* Status Indicator Pill */}
                 <div className="mt-5 pl-2 pt-3 border-t border-zinc-850/5 flex items-center justify-between">
-                  <span className="text-[11px] text-zinc-500">Situação do Atendimento:</span>
+                  <div className="flex flex-col">
+                    <span className="text-[11px] text-zinc-500">Situação do Atendimento:</span>
+                    {event.createdBy_name && (
+                      <span className="text-[10px] text-[#E67E22] font-semibold mt-0.5">
+                        Técnico: {event.createdBy_name}
+                      </span>
+                    )}
+                  </div>
                   <div className={`px-3 py-1.5 rounded-full border text-xs font-semibold flex items-center gap-1.5 ${config.bg}`}>
                     {config.icon}
                     <span>{config.label}</span>

@@ -34,6 +34,7 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
   const [editPaymentValue, setEditPaymentValue] = useState<number>(150);
   const [editAllowedTabs, setEditAllowedTabs] = useState<string[]>([]);
   const [editCargo, setEditCargo] = useState<'técnico' | 'gerente' | 'supervisor de operações'>('técnico');
+  const [editCanEditData, setEditCanEditData] = useState<boolean>(true);
   const [showEditConfirm, setShowEditConfirm] = useState<{ original: SystemUserDetail; updated: SystemUserDetail; newPassword?: string } | null>(null);
   
   const refreshUsers = () => {
@@ -132,6 +133,7 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
     setEditPaymentValue(user.paymentValue);
     setEditAllowedTabs(user.allowedTabs || []);
     setEditCargo(user.cargo || 'técnico');
+    setEditCanEditData(user.canEditData !== false);
   };
 
   const handleToggleTabPermission = (tabId: string) => {
@@ -155,7 +157,8 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
       paymentStatus: editPaymentStatus,
       paymentValue: editPaymentValue,
       allowedTabs: editAllowedTabs,
-      cargo: editCargo
+      cargo: editCargo,
+      canEditData: editCanEditData
     };
 
     setShowEditConfirm({
@@ -665,6 +668,25 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
                     <option value="técnico">Técnico</option>
                     <option value="gerente">Gerente</option>
                     <option value="supervisor de operações">Supervisor de Operações</option>
+                  </select>
+                </div>
+
+                {/* Permissão de Edição */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                    Nível de Permissão / Edição *
+                  </label>
+                  <select
+                    value={editCanEditData ? 'completo' : 'visualizacao'}
+                    onChange={(e) => setEditCanEditData(e.target.value === 'completo')}
+                    className={`w-full py-2 px-3 rounded-xl border text-xs outline-none transition-all ${
+                      theme === 'dark'
+                        ? 'bg-zinc-950 border-[#242424] text-zinc-300 focus:border-[#D35400]'
+                        : 'bg-white border-zinc-200 text-zinc-700 focus:border-[#D35400]'
+                    }`}
+                  >
+                    <option value="completo">Acesso Completo (Pode criar, editar e excluir)</option>
+                    <option value="visualizacao">Visualização Apenas (Não pode alterar nada)</option>
                   </select>
                 </div>
 

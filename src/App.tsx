@@ -260,6 +260,7 @@ export default function App() {
                   showToast={showToast}
                   onRefreshData={refreshAllData}
                   canEdit={canEditState}
+                  currentUser={currentUser}
                 />
               )}
 
@@ -271,6 +272,7 @@ export default function App() {
                   showToast={showToast}
                   onRefreshData={refreshAllData}
                   canEdit={canEditState}
+                  currentUser={currentUser}
                 />
               )}
 
@@ -281,6 +283,7 @@ export default function App() {
                   showToast={showToast}
                   onRefreshData={refreshAllData}
                   canEdit={canEditState}
+                  currentUser={currentUser}
                 />
               )}
 

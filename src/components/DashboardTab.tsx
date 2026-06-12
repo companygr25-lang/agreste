@@ -37,6 +37,11 @@ export default function DashboardTab({
 }: DashboardTabProps) {
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
 
+  // Find current user's role and edit level
+  const uDetails = AGRESTE_DB.getUserDetails();
+  const uCurrentDetails = currentUser ? uDetails[currentUser.toLowerCase().trim()] : null;
+  const canEditState = uCurrentDetails ? uCurrentDetails.canEditData !== false : true;
+
   // States and subscription for Bell Notifications
   const [dbNotifications, setDbNotifications] = useState<FloatingNotification[]>(() => AGRESTE_DB.getNotifications());
   const [showBellDropdown, setShowBellDropdown] = useState(false);
@@ -1100,14 +1105,16 @@ export default function DashboardTab({
               <span className="text-[9px] font-mono font-bold bg-[#D35400]/25 text-[#D35400] border border-[#D35400]/30 px-1.5 py-0.5 rounded-sm">
                 {objectives.filter(o => !o.done).length} Pendências
               </span>
-              <button
-                type="button"
-                onClick={() => setShowAddForm(!showAddForm)}
-                className="p-1 hover:bg-[#D35400]/10 text-[#D35400] rounded transition-colors text-xs font-bold flex items-center gap-0.5 cursor-pointer border border-[#D35400]/20"
-                title="Adicionar Objetivo"
-              >
-                <Plus className="w-3 h-3" /> <span className="text-[8.5px] uppercase">Novo</span>
-              </button>
+              {canEditState && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(!showAddForm)}
+                  className="p-1 hover:bg-[#D35400]/10 text-[#D35400] rounded transition-colors text-xs font-bold flex items-center gap-0.5 cursor-pointer border border-[#D35400]/20"
+                  title="Adicionar Objetivo"
+                >
+                  <Plus className="w-3 h-3" /> <span className="text-[8.5px] uppercase">Novo</span>
+                </button>
+              )}
             </div>
           </div>
           <p className="text-[11px] text-zinc-400 mb-3 leading-tight">
@@ -1208,7 +1215,13 @@ export default function DashboardTab({
               {objectives.map((obj) => (
                 <div 
                   key={obj.id} 
-                  onClick={() => handleToggleObjective(obj.id, obj.task)}
+                  onClick={() => {
+                    if (canEditState) {
+                      handleToggleObjective(obj.id, obj.task);
+                    } else {
+                      showToast('Acesso apenas leitura: você não pode alterar os objetivos técnico do dia.', 'error');
+                    }
+                  }}
                   className={`flex items-start gap-2.5 p-2 rounded-sm border cursor-pointer transition-all ${
                     obj.done 
                       ? theme === 'dark' ? 'bg-[#141414]/40 border-zinc-900/60 opacity-55' : 'bg-zinc-50 border-zinc-150 opacity-60'
@@ -1241,14 +1254,16 @@ export default function DashboardTab({
                   </div>
 
                   {/* Delete Objective button */}
-                  <button
-                    type="button"
-                    onClick={(e) => handleDeleteObjective(obj.id, e)}
-                    className="p-1 hover:text-red-500 text-zinc-600 dark:text-zinc-550 rounded transition-colors self-center cursor-pointer"
-                    title="Apagar objetivo"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {canEditState && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteObjective(obj.id, e)}
+                      className="p-1 hover:text-red-500 text-zinc-600 dark:text-zinc-550 rounded transition-colors self-center cursor-pointer"
+                      title="Apagar objetivo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
