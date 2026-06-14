@@ -81,7 +81,13 @@ export default function LoginScreen({
         showToast('Este usuário de operador já existe.', 'error');
       }
     } else {
-      const authResult = AGRESTE_DB.validateUser(username, password);
+      let deviceId = localStorage.getItem('agreste_device_id');
+      if (!deviceId) {
+        deviceId = 'dev-' + Math.random().toString(36).substring(2, 11) + '-' + Date.now();
+        localStorage.setItem('agreste_device_id', deviceId);
+      }
+
+      const authResult = AGRESTE_DB.validateUser(username, password, deviceId);
       if (authResult.valid) {
         showToast(`Bem-vindo ao Painel Técnico, ${username}!`, 'success');
         onLoginSuccess(username);

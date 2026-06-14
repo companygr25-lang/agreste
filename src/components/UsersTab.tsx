@@ -200,6 +200,16 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
     }
   };
 
+  const handleResetDevices = (username: string) => {
+    const updated = { ...usersDict };
+    if (updated[username]) {
+      updated[username].allowedDevices = [];
+      AGRESTE_DB.saveUserDetails(updated);
+      showToast(`Aparelhos autorizados de "${updated[username].name}" limpos com sucesso.`, 'success');
+      refreshUsers();
+    }
+  };
+
   return (
     <div className="space-y-6" id="users-tab-container">
       {/* Top Welcome Title */}
@@ -342,21 +352,38 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
                         {user.cargo || 'técnico'}
                       </span>
                     </h4>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] font-mono text-zinc-500">@{user.username}</span>
-                      <span className="text-[10px] text-zinc-400">•</span>
-                      <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 font-bold uppercase">
-                        <span>Licença:</span>
-                        <div className="flex items-center gap-0.5">
-                          <span className="text-zinc-500 text-[10px] font-normal font-mono">R$</span>
-                          <input
-                            type="number"
-                            min="0"
-                            value={user.paymentValue !== undefined ? user.paymentValue : 150}
-                            onChange={(e) => handleUpdatePaymentValue(user.username, Number(e.target.value))}
-                            className="w-16 px-1.5 py-0.5 font-mono text-orange-500 bg-zinc-950/40 border border-zinc-800 rounded outline-none text-right focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all text-[11px]"
-                          />
+                    <div className="flex flex-col gap-1.5 mt-1.5">
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-mono text-zinc-500">@{user.username}</span>
+                        <span className="text-[10px] text-zinc-400">•</span>
+                        <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 font-bold uppercase">
+                          <span>Licença:</span>
+                          <div className="flex items-center gap-0.5">
+                            <span className="text-zinc-500 text-[10px] font-normal font-mono">R$</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={user.paymentValue !== undefined ? user.paymentValue : 150}
+                              onChange={(e) => handleUpdatePaymentValue(user.username, Number(e.target.value))}
+                              className="w-16 px-1.5 py-0.5 font-mono text-orange-500 bg-zinc-950/40 border border-zinc-800 rounded outline-none text-right focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all text-[11px]"
+                            />
+                          </div>
                         </div>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 mt-0.5">
+                        <div className="flex items-center gap-1 text-[10px] text-zinc-400 font-bold uppercase bg-zinc-950/20 px-2 py-0.5 rounded-md border border-zinc-900/10 dark:border-zinc-800/40">
+                          <span>Aparelhos:</span>
+                          <span className="text-[#FC6B0A] font-mono">{(user.allowedDevices || []).length}/2</span>
+                        </div>
+                        {(user.allowedDevices || []).length > 0 && (
+                          <button
+                            onClick={() => handleResetDevices(user.username)}
+                            className="text-[9px] px-2 py-0.5 rounded-md bg-red-600/15 border border-red-500/20 text-red-500 hover:bg-red-500/25 transition-all font-semibold uppercase tracking-wider cursor-pointer"
+                          >
+                            Resetar Aparelhos
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

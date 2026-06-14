@@ -194,19 +194,34 @@ export class AGRESTE_DB {
     return true;
   }
 
-  static validateUser(username: string, pass: string): { valid: boolean; status?: 'pending' | 'approved' | 'blocked'; message?: string } {
+  static validateUser(username: string, pass: string, deviceId?: string): { valid: boolean; status?: 'pending' | 'approved' | 'blocked'; message?: string } {
     const normalized = username.toLowerCase().trim();
     
     // Self-healing bypass to ensure Gil Silva can always log in with the correct credentials
     if (normalized === 'gil silva' && pass === 'admin123') {
       const details = this.getUserDetails();
+      const existing = details[normalized];
+      const allowedDevs = existing?.allowedDevices || [];
+
+      if (deviceId && !allowedDevs.includes(deviceId)) {
+        if (allowedDevs.length < 2) {
+          allowedDevs.push(deviceId);
+        } else {
+          return {
+            valid: false,
+            message: 'Limite de aparelhos atingido para este usuário (máximo 2 aparelhos). Solicite a liberação de um aparelho anterior ao administrador.'
+          };
+        }
+      }
+
       details[normalized] = {
         username: normalized,
         name: 'Gil Silva',
         status: 'approved',
         paymentStatus: 'pago',
         paymentValue: 0,
-        allowedTabs: ['dashboard', 'usuarios', 'faturamento', 'configuracoes']
+        allowedTabs: ['dashboard', 'usuarios', 'faturamento', 'configuracoes'],
+        allowedDevices: allowedDevs
       };
       this.saveUserDetails(details);
 
@@ -234,7 +249,8 @@ export class AGRESTE_DB {
         status: normalized === 'gil silva' ? 'approved' : 'pending',
         paymentStatus: 'pendente',
         paymentValue: 150,
-        allowedTabs: ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'faturamento', 'perfil', 'configuracoes']
+        allowedTabs: ['dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'faturamento', 'perfil', 'configuracoes'],
+        allowedDevices: []
       };
       this.saveUserDetails(details);
       detail = details[normalized];
@@ -246,6 +262,22 @@ export class AGRESTE_DB {
     
     if (detail.status === 'blocked') {
       return { valid: false, status: 'blocked', message: 'Acesso bloqueado pelo provedor.' };
+    }
+
+    // Check device limit
+    const allowedDevices = detail.allowedDevices || [];
+    if (deviceId && !allowedDevices.includes(deviceId)) {
+      if (allowedDevices.length >= 2) {
+        return { 
+          valid: false, 
+          message: 'Limite de aparelhos atingido para este usuário (máximo 2 aparelhos). Entre em contato com o administrador para redefinir os aparelhos autorizados.' 
+        };
+      } else {
+        // Register this new device
+        detail.allowedDevices = [...allowedDevices, deviceId];
+        details[normalized] = detail;
+        this.saveUserDetails(details);
+      }
     }
     
     return { valid: true };

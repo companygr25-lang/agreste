@@ -25,6 +25,7 @@ export interface SystemUserDetail {
   allowedTabs: string[];
   canEditData?: boolean;
   cargo?: 'técnico' | 'gerente' | 'supervisor de operações';
+  allowedDevices?: string[];
 }
 
 export interface Client {
