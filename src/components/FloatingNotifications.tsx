@@ -304,7 +304,7 @@ export default function FloatingNotifications({
   if (activeNotifs.length === 0) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 w-full max-w-sm px-4 sm:px-0">
+    <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-[9999] flex flex-col gap-3 max-w-sm px-0">
       <AnimatePresence>
         {activeNotifs.map((notif) => {
           const isChatReq = notif.type === 'chat_request';

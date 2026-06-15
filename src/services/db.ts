@@ -771,10 +771,33 @@ export class AGRESTE_DB {
       { id: 'task-men-1', day: 'Mensal', title: '30 de cada mês: Levantamento do estoque', completed: false },
       { id: 'task-men-2', day: 'Mensal', title: '01 de cada mês: Cobrar as compras / feira e papelaria / Conferir estoque mínimo e fazer pedido TR', completed: false }
     ];
-    return this.get<ManagerTask[]>('manager_tasks', defaultTasks);
+    const tasks = this.get<ManagerTask[]>('manager_tasks', defaultTasks);
+
+    // Get Monday of the current week to detect week boundaries
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(now.setDate(diff));
+    const currentWeekMondayStr = monday.toISOString().split('T')[0];
+
+    const lastResetWeek = this.get<string>('checklist_last_reset_week', '');
+
+    if (!lastResetWeek) {
+      // First time setup, save the current Monday to avoid resetting immediately
+      this.set('checklist_last_reset_week', currentWeekMondayStr);
+    } else if (lastResetWeek !== currentWeekMondayStr) {
+      // A new week started! Reset completed status of all tasks
+      const resetTasks = tasks.map(t => ({ ...t, completed: false }));
+      this.set('manager_tasks', resetTasks);
+      this.set('checklist_last_reset_week', currentWeekMondayStr);
+      return resetTasks;
+    }
+
+    return tasks;
   }
 
   static saveManagerTasks(tasks: ManagerTask[]): void {
+    // Save completion status during the week
     this.set('manager_tasks', tasks);
   }
 }

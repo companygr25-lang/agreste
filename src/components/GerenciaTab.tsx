@@ -18,9 +18,15 @@ interface GerenciaTabProps {
   canEdit?: boolean;
 }
 
+const getTodayWeekday = (): WeekdayUnion => {
+  const dayNames: WeekdayUnion[] = ['Segunda', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+  const dayOfWeek = new Date().getDay(); // 0 is Sunday, 1 is Monday, etc.
+  return dayNames[dayOfWeek] || 'Segunda';
+};
+
 export default function GerenciaTab({ theme, showToast, canEdit = true }: GerenciaTabProps) {
   const [tasks, setTasks] = useState<ManagerTask[]>([]);
-  const [selectedDay, setSelectedDay] = useState<WeekdayUnion>('Segunda');
+  const [selectedDay, setSelectedDay] = useState<WeekdayUnion>(getTodayWeekday());
   const [searchQuery, setSearchQuery] = useState('');
   
   // Custom tasks modal states

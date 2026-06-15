@@ -47,7 +47,7 @@ export default function Toast({ message, type, onClose }: ToastProps) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 20, scale: 0.95 }}
       id={`toast-${type}`}
-      className={`fixed bottom-6 right-6 z-50 flex flex-col min-w-xs max-w-sm rounded-lg border shadow-xl overflow-hidden ${currentConfig.bg}`}
+      className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-[9999] flex flex-col sm:min-w-[320px] max-w-md rounded-lg border shadow-xl overflow-hidden ${currentConfig.bg}`}
     >
       <div className="flex items-center gap-3 p-4">
         {currentConfig.icon}
