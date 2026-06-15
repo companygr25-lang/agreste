@@ -271,7 +271,7 @@ export default function DashboardTab({
               <Landmark className="w-6 h-6 shrink-0 text-[#D35400]" /> PAINEL DO PROVEDOR
             </h2>
             <p className="text-xs text-zinc-500 font-medium font-sans">
-              Gerencie a cobrança das licenças, faturamento de mensalidades ativos e status de contas.
+              Gerencie a cobrança das licenças, mensalidades ativas e status de contas.
             </p>
           </div>
           
@@ -309,7 +309,7 @@ export default function DashboardTab({
                     initial={{ opacity: 0, scale: 0.95, y: -10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                    className={`absolute right-0 md:right-0 mt-2 w-80 rounded-2xl border p-4 shadow-2xl z-50 text-left ${
+                    className={`fixed left-4 right-4 top-24 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 rounded-2xl border p-4 shadow-2xl z-50 text-left ${
                       theme === 'dark'
                         ? 'bg-zinc-950 border-zinc-850 text-zinc-100 shadow-[0_20px_40px_rgba(0,0,0,0.8)]'
                         : 'bg-white border-zinc-200 text-zinc-900 shadow-[0_20px_40px_rgba(0,0,0,0.15)]'
@@ -406,7 +406,7 @@ export default function DashboardTab({
         </div>
 
         {/* Stats and Financial Summary */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className={`p-4 rounded-2xl border ${
             theme === 'dark' ? 'bg-[#151515] border-zinc-900' : 'bg-white border-zinc-200 shadow-sm'
           } text-left flex items-center justify-between`}>
@@ -424,19 +424,6 @@ export default function DashboardTab({
             theme === 'dark' ? 'bg-[#151515] border-zinc-900' : 'bg-white border-zinc-200 shadow-sm'
           } text-left flex items-center justify-between`}>
             <div>
-              <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block">Faturamento Estimado</span>
-              <span className="text-3xl font-extrabold font-mono text-emerald-500 mt-1 block">
-                R$ {totalIncomeFuture}
-              </span>
-              <span className="text-[10px] text-zinc-500 block mt-1 font-sans">Valor teórico mensal</span>
-            </div>
-            <TrendingUp className="w-8 h-8 text-emerald-500/15" />
-          </div>
-
-          <div className={`p-4 rounded-2xl border ${
-            theme === 'dark' ? 'bg-[#151515] border-zinc-900' : 'bg-white border-zinc-200 shadow-sm'
-          } text-left flex items-center justify-between`}>
-            <div>
               <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block">Mensalidades Recebidas</span>
               <span className="text-3xl font-extrabold font-mono text-emerald-500 mt-1 block">
                 R$ {paidIncome}
@@ -447,7 +434,7 @@ export default function DashboardTab({
           </div>
 
           <div className={`p-4 rounded-2xl border ${
-            theme === 'dark' ? 'bg-[#151515] border-zinc-900' : 'bg-white border-zinc-200 shadow-sm'
+            theme === 'dark' ? 'bg-[#151515] border-[#242424]' : 'bg-white border-zinc-200 shadow-sm'
           } text-left flex items-center justify-between`}>
             <div>
               <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block">Mensalidades Pendentes</span>
@@ -649,7 +636,7 @@ export default function DashboardTab({
                   initial={{ opacity: 0, scale: 0.95, y: -10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                  className={`absolute right-0 md:right-0 mt-2 w-80 rounded-2xl border p-4 shadow-2xl z-50 text-left ${
+                  className={`fixed left-4 right-4 top-24 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 rounded-2xl border p-4 shadow-2xl z-50 text-left ${
                     theme === 'dark'
                       ? 'bg-zinc-950 border-zinc-850 text-zinc-100 shadow-[0_20px_40px_rgba(0,0,0,0.8)]'
                       : 'bg-white border-zinc-200 text-zinc-900 shadow-[0_20px_40px_rgba(0,0,0,0.15)]'
@@ -899,7 +886,7 @@ export default function DashboardTab({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         
         {/* Weekly Productivity Custom Line & Bar Chart */}
-        <div className={`col-span-1 lg:col-span-8 p-4 rounded-sm border ${
+        <div className={`col-span-1 lg:col-span-12 p-4 rounded-sm border ${
           theme === 'dark' ? 'bg-[#1A1A1A] border-[#242424]' : 'bg-white border-zinc-200 shadow-sm'
         }`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-3">
@@ -1024,68 +1011,6 @@ export default function DashboardTab({
               )}
             </div>
           )}
-        </div>
-
-        {/* High-Contrast Pending Payments Block */}
-        <div className={`col-span-1 lg:col-span-4 p-4 rounded-sm border flex flex-col justify-between ${
-          theme === 'dark' ? 'bg-[#1A1A1A] border-[#242424]' : 'bg-white border-zinc-200 shadow-sm'
-        }`}>
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Landmark className="w-4 h-4 text-[#D35400]" />
-              <h3 className="text-[14px] font-black uppercase tracking-tight text-zinc-200 dark:text-zinc-100">Faturas Pendentes</h3>
-            </div>
-            
-            <p className="text-[11px] text-zinc-400 mb-2 leading-tight">
-              Acompanhamento de fluxos abertos. Realize cobranças ativas para manter a sustentabilidade operacional.
-            </p>
-
-            {pendingPaymentsCount === 0 ? (
-              <div className="py-6 text-center bg-[#141414] rounded border border-dashed border-zinc-800 text-zinc-500 text-[11px]">
-                <CheckCircle2 className="w-6 h-6 text-emerald-500/50 mx-auto mb-1" />
-                Nenhuma pendência financeira encontrada!
-              </div>
-            ) : (
-              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                {pendingPaymentClients.map((client) => (
-                  <div 
-                    key={client.id}
-                    className={`flex items-center justify-between p-2 rounded-sm border text-[11px] border-l-[3.5px] border-l-red-500 ${
-                      theme === 'dark' 
-                        ? 'bg-[#141414] border-[#262626] hover:border-zinc-800' 
-                        : 'bg-red-50/20 border-red-100 hover:bg-red-50/40'
-                    }`}
-                  >
-                    <div className="truncate pr-1">
-                      <p className="font-bold text-zinc-250 dark:text-zinc-100 truncate">
-                        {client.name}
-                      </p>
-                      <p className="text-[9px] text-zinc-500 font-mono mt-0.5 mt-0">
-                        {client.city} • Responsável: {client.responsible} {client.phone ? `(${client.phone})` : ''}
-                      </p>
-                    </div>
-                    <button
-                      onClick={(e) => handleQuickResolvePayment(client, e)}
-                      id={`pay-btn-${client.id}`}
-                      className="px-2 py-0.5 bg-[#D35400]/15 border border-[#D35400]/40 text-[#D35400] text-[10px] font-bold rounded-sm hover:bg-[#D35400] hover:text-white transition-all cursor-pointer whitespace-nowrap shrink-0"
-                    >
-                      Quitar
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="mt-2 pt-2 border-t border-zinc-850">
-            <button
-              onClick={() => setActiveTab('clientes')}
-              id="dashboard-goto-clients-btn"
-              className="w-full py-1.5 bg-[#141414] hover:bg-zinc-900 border border-[#242424] text-[11px] font-bold uppercase tracking-wider text-zinc-300 rounded-sm flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              Faturamento Completo <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
         </div>
       </div>
 
