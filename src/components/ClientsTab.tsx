@@ -53,6 +53,7 @@ export default function ClientsTab({
   const [selectedSize, setSelectedSize] = useState<'todos' | 'grande' | 'pequeno'>('todos');
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<'todos' | 'pago' | 'pendente'>('todos');
   const [selectedCity, setSelectedCity] = useState('todas');
+  const [selectedReportStatus, setSelectedReportStatus] = useState<'todos' | 'com_relatorio' | 'sem_relatorio'>('todos');
 
   // Modals visibility states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -477,6 +478,7 @@ export default function ClientsTab({
   const uniqueCities = Array.from(new Set(clients.map(c => c.city ? c.city.trim() : ''))).filter(Boolean).sort();
 
   // Expanded complex filters
+  const reports = AGRESTE_DB.getReports();
   const filteredClients = clients.filter((client) => {
     // 1. Search Query
     const q = searchQuery.toLowerCase().trim();
@@ -495,7 +497,43 @@ export default function ClientsTab({
     // 4. City
     const matchesCity = selectedCity === 'todas' || client.city.trim().toLowerCase() === selectedCity.trim().toLowerCase();
 
-    return matchesSearch && matchesSize && matchesPayment && matchesCity;
+    // 5. Report status (Feito/Não Feito)
+    let matchesReport = true;
+    if (selectedReportStatus !== 'todos') {
+      const clientReports = reports.filter(r => r.clientId === client.id);
+      let hasActiveReport = false;
+      if (clientReports.length > 0) {
+        const latestRep = clientReports.reduce((latest, current) => {
+          const dateA = new Date(latest.date);
+          const dateB = new Date(current.date);
+          return dateB > dateA ? current : latest;
+        });
+        
+        let dateToParse = latestRep.date;
+        if (dateToParse.includes('/')) {
+          const parts = dateToParse.split('/');
+          if (parts.length === 3) {
+            dateToParse = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+        }
+        const reportDate = new Date(dateToParse + 'T12:00:00');
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+        threeMonthsAgo.setHours(0,0,0,0);
+        
+        if (reportDate >= threeMonthsAgo) {
+          hasActiveReport = true;
+        }
+      }
+      
+      if (selectedReportStatus === 'com_relatorio') {
+        matchesReport = hasActiveReport;
+      } else if (selectedReportStatus === 'sem_relatorio') {
+        matchesReport = !hasActiveReport;
+      }
+    }
+
+    return matchesSearch && matchesSize && matchesPayment && matchesCity && matchesReport;
   });
 
   return (
@@ -597,10 +635,28 @@ export default function ClientsTab({
               ))}
             </select>
           </div>
+
+          {/* Relatório Reis Select Filter */}
+          <div className="w-full md:w-52 select-container">
+            <select
+              value={selectedReportStatus}
+              onChange={(e) => setSelectedReportStatus(e.target.value as any)}
+              id="filter-client-report"
+              className={`w-full py-2 px-3 rounded-lg border text-xs outline-none transition-all ${
+                theme === 'dark'
+                  ? 'bg-zinc-950 border-[#242424] text-zinc-300 focus:border-[#D35400]'
+                  : 'bg-white border-zinc-200 text-zinc-700 focus:border-[#D35400] shadow-sm'
+              }`}
+            >
+              <option value="todos">Relatórios: Todos</option>
+              <option value="com_relatorio">Com Relatório (Ativo)</option>
+              <option value="sem_relatorio">Sem Relatório (ou Vencido)</option>
+            </select>
+          </div>
         </div>
 
         {/* Clear filters badge row */}
-        {(selectedSize !== 'todos' || selectedCity !== 'todas' || searchQuery) && (
+        {(selectedSize !== 'todos' || selectedCity !== 'todas' || selectedReportStatus !== 'todos' || searchQuery) && (
           <div className="flex items-center gap-2 pt-1.5 border-t border-dashed border-zinc-800/20 dark:border-zinc-800">
             <span className="text-[10px] text-zinc-500 uppercase font-bold font-mono">Filtros Ativos:</span>
             <div className="flex flex-wrap items-center gap-1.5 select-count">
@@ -619,12 +675,18 @@ export default function ClientsTab({
                   Cidade: {selectedCity}
                 </span>
               )}
+              {selectedReportStatus !== 'todos' && (
+                <span className="text-[9px] px-2 py-0.5 bg-orange-600/10 border border-orange-500/20 text-[#D35400] font-semibold rounded">
+                  Relatório: {selectedReportStatus === 'com_relatorio' ? 'Com Relatório Ativo' : 'Sem Relatório ou Vencido'}
+                </span>
+              )}
               <button
                 onClick={() => {
                   setSearchQuery('');
                   setSelectedSize('todos');
                   setSelectedPaymentStatus('todos');
                   setSelectedCity('todas');
+                  setSelectedReportStatus('todos');
                 }}
                 className="text-[9px] hover:underline font-bold text-zinc-500 hover:text-orange-500 pl-1.5 transition-colors cursor-pointer"
               >
