@@ -313,13 +313,13 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
                 <div class="log-header">${rep.date} - ${rep.clientName} (${rep.clientCity}) — Técnico: ${rep.techName}</div>
                 ${rep.recommendations ? `
                   <div class="note-box">
-                    <strong>OBSERVAÇÕES DO RELATÓRIO:</strong><br>
+                    <strong>RECOMENDAÇÕES PARA O CLIENTE:</strong><br>
                     ${rep.recommendations}
                   </div>
                 ` : ''}
                 ${rep.comments ? `
                   <div class="note-box" style="border-left-color: #71717a;">
-                    <strong>SOLICITAÇÕES E PARECERES ADICIONAIS:</strong><br>
+                    <strong>OBSERVAÇÕES DO CLIENTE:</strong><br>
                     ${rep.comments}
                   </div>
                 ` : ''}
@@ -792,7 +792,7 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
                       <tbody>
                         {[
                           { key: 'moscas', label: '🦟 Moscas / Insetos Voadores (Dípteros)', value: previewReport.pests.moscas },
-                          { key: 'baratas', label: '🪳 Baratas / Rasteiros (Blatodeos)', value: previewReport.pests.baratas },
+                          { key: 'baratas', label: '🪳 Baratas', value: previewReport.pests.baratas },
                           { key: 'ratos', label: '🐀 Ratos / Roedores Urbanos (Roedores)', value: previewReport.pests.ratos },
                           { key: 'formigas', label: '🐜 Formigas / Himonópteros (Formigas)', value: previewReport.pests.formigas },
                         ].map((row) => (
@@ -841,7 +841,7 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
                     </div>
                   </div>
                   <div>
-                    <span className="text-[9px] font-bold text-zinc-400 uppercase block mb-1">Valoração Tomador</span>
+                    <span className="text-[9px] font-bold text-zinc-400 uppercase block mb-1">Satisfação do Cliente</span>
                     <span className="text-xs font-bold text-zinc-800 uppercase block">{previewReport.satisfaction || 'Excelente'}</span>
                   </div>
                 </div>
@@ -850,14 +850,14 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
                 <div className="space-y-4 mb-8 text-left text-xs">
                   {previewReport.recommendations && (
                     <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-200/40">
-                      <h4 className="font-bold text-[#D35400] uppercase text-[9px] tracking-wider mb-1 font-sans">Observações do Relatório</h4>
+                      <h4 className="font-bold text-[#D35400] uppercase text-[9px] tracking-wider mb-1 font-sans">Recomendações para o cliente</h4>
                       <p className="text-zinc-700 leading-relaxed font-sans">{previewReport.recommendations}</p>
                     </div>
                   )}
 
                   {previewReport.comments && (
                     <div>
-                      <h4 className="font-bold text-zinc-500 uppercase text-[9px] tracking-wider mb-1 font-sans">Observações e Pareceres Adicionais</h4>
+                      <h4 className="font-bold text-zinc-500 uppercase text-[9px] tracking-wider mb-1 font-sans">Observações do cliente</h4>
                       <p className="text-zinc-650 leading-relaxed bg-zinc-50/40 p-2.5 rounded-lg border border-zinc-150 font-sans">{previewReport.comments}</p>
                     </div>
                   )}

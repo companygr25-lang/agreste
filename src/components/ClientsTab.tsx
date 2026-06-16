@@ -646,44 +646,86 @@ export default function ClientsTab({
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredClients.map((client) => (
-            <div 
-              key={client.id}
-              className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
-                client.isPendingConfirmation
-                  ? theme === 'dark'
-                    ? 'bg-amber-600/5 border-amber-500/70 relative shadow-[0_0_15px_rgba(245,158,11,0.15)] animate-[pulse_3s_infinite]'
-                    : 'bg-amber-50 border-amber-500 relative shadow-[0_0_15px_rgba(245,158,11,0.1)]'
-                  : theme === 'dark' 
-                    ? 'bg-[#1A1A1A] border-[#242424]' 
-                    : 'bg-white border-zinc-200 shadow-xs'
-              }`}
-            >
-              {/* Left Group: Code, Name, Details */}
-              <div className="flex items-start gap-3 flex-1 min-w-0">
-                <div className="text-center shrink-0">
-                  <span className="text-[10px] font-bold font-mono px-2 py-1 bg-zinc-950/40 text-[#D35400] rounded-lg border border-zinc-900/30">
-                    Cód: {client.code || '001'}
-                  </span>
-                  <div className="mt-2 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase ${
-                      client.size === 'grande' 
-                        ? 'bg-[#D35400]/10 text-[#D35400]' 
-                        : 'bg-zinc-500/10 text-zinc-400'
-                    }`}>
-                      {client.size === 'grande' ? 'Grande' : 'Pequeno'}
+          {filteredClients.map((client) => {
+            const reports = AGRESTE_DB.getReports();
+            const clientReports = reports.filter(r => r.clientId === client.id);
+            let recentReportInfo = null;
+            if (clientReports.length > 0) {
+              const latestRep = clientReports.reduce((latest, current) => {
+                const dateA = new Date(latest.date);
+                const dateB = new Date(current.date);
+                return dateB > dateA ? current : latest;
+              });
+              
+              let dateToParse = latestRep.date;
+              if (dateToParse.includes('/')) {
+                const parts = dateToParse.split('/');
+                if (parts.length === 3) {
+                  dateToParse = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                }
+              }
+              const reportDate = new Date(dateToParse + 'T12:00:00');
+              const threeMonthsAgo = new Date();
+              threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+              threeMonthsAgo.setHours(0,0,0,0);
+              
+              if (reportDate >= threeMonthsAgo) {
+                const renewalDate = new Date(reportDate);
+                renewalDate.setMonth(renewalDate.getMonth() + 3);
+                recentReportInfo = {
+                  dateStr: reportDate.toLocaleDateString('pt-BR'),
+                  renewalDateStr: renewalDate.toLocaleDateString('pt-BR'),
+                  report: latestRep
+                };
+              }
+            }
+
+            return (
+              <div 
+                key={client.id}
+                className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
+                  client.isPendingConfirmation
+                    ? theme === 'dark'
+                      ? 'bg-amber-600/5 border-amber-500/70 relative shadow-[0_0_15px_rgba(245,158,11,0.15)] animate-[pulse_3s_infinite]'
+                      : 'bg-amber-50 border-amber-500 relative shadow-[0_0_15px_rgba(245,158,11,0.1)]'
+                    : theme === 'dark' 
+                      ? 'bg-[#1A1A1A] border-[#242424]' 
+                      : 'bg-white border-zinc-200 shadow-xs'
+                }`}
+              >
+                {/* Left Group: Code, Name, Details */}
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <div className="text-center shrink-0">
+                    <span className="text-[10px] font-bold font-mono px-2 py-1 bg-zinc-950/40 text-[#D35400] rounded-lg border border-zinc-900/30">
+                      Cód: {client.code || '001'}
                     </span>
-                  </div>
-                </div>
-                <div className="min-w-0 text-left">
-                  <h4 className="font-bold text-sm md:text-md text-zinc-200 dark:text-zinc-100 flex flex-wrap items-center gap-1.5 truncate">
-                    <span>{client.name}</span>
-                    {client.isPendingConfirmation && (
-                      <span className="text-[9px] px-2 py-0.5 bg-amber-600 text-white rounded-full font-extrabold uppercase tracking-wider animate-bounce inline-flex items-center gap-1 shrink-0">
-                        <Sparkles className="w-2.5 h-2.5 animate-spin" /> NOVO CADASTRO (CONFIRMAR)
+                    <div className="mt-2 text-center">
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase ${
+                        client.size === 'grande' 
+                          ? 'bg-[#D35400]/10 text-[#D35400]' 
+                          : 'bg-zinc-500/10 text-zinc-400'
+                      }`}>
+                        {client.size === 'grande' ? 'Grande' : 'Pequeno'}
                       </span>
-                    )}
-                  </h4>
+                    </div>
+                  </div>
+                  <div className="min-w-0 text-left">
+                    <h4 className="font-bold text-sm md:text-md text-zinc-200 dark:text-zinc-100 flex flex-wrap items-center gap-1.5 truncate">
+                      <span>{client.name}</span>
+                      {client.isPendingConfirmation && (
+                        <span className="text-[9px] px-2 py-0.5 bg-amber-600 text-white rounded-full font-extrabold uppercase tracking-wider animate-bounce inline-flex items-center gap-1 shrink-0">
+                          <Sparkles className="w-2.5 h-2.5 animate-spin" /> NOVO CADASTRO (CONFIRMAR)
+                        </span>
+                      )}
+                      {recentReportInfo && (
+                        <span 
+                          className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider inline-flex items-center gap-1 shrink-0 select-none bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm"
+                          title={`Relatório ativo criado em ${recentReportInfo.dateStr}.` }
+                        >
+                          <CheckCircle className="w-3 h-3 text-emerald-400" /> Relatório Criado (Até {recentReportInfo.renewalDateStr})
+                        </span>
+                      )}
+                    </h4>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-400 mt-1">
                     <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-[#D35400]" /> {client.city}</span>
                     <span className="text-zinc-650">•</span>
@@ -747,7 +789,7 @@ export default function ClientsTab({
                 </div>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       )}
 
