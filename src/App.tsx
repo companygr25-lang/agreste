@@ -18,7 +18,6 @@ import ProfileTab from './components/ProfileTab';
 import SettingsTab from './components/SettingsTab';
 import UsersTab from './components/UsersTab';
 import Toast from './components/Toast';
-import AgresteChat from './components/AgresteChat';
 import FloatingNotifications from './components/FloatingNotifications';
 import ControlesTab from './components/ControlesTab';
 import GerenciaTab from './components/GerenciaTab';
@@ -172,34 +171,6 @@ export default function App() {
     );
   }
 
-  if (currentClient) {
-    return (
-      <main className={theme === 'dark' ? 'dark text-zinc-100 bg-[#0F0F0F] min-h-screen p-4 sm:p-6 lg:p-8 flex items-center justify-center' : 'text-zinc-900 bg-zinc-50 min-h-screen p-4 sm:p-6 lg:p-8 flex items-center justify-center'} id="app-viewport-client">
-        <div className="max-w-4xl mx-auto w-full">
-          <AgresteChat 
-            theme={theme}
-            showToast={showToast}
-            currentClient={currentClient}
-            onLogoutClient={() => {
-              localStorage.removeItem('agreste_logged_client');
-              setCurrentClient(null);
-              showToast('Sessão de suporte encerrada.', 'info');
-            }}
-          />
-        </div>
-        <AnimatePresence>
-          {toast && (
-            <Toast 
-              message={toast.message} 
-              type={toast.type} 
-              onClose={() => setToast(null)} 
-            />
-          )}
-        </AnimatePresence>
-      </main>
-    );
-  }
-
   const userDetails = AGRESTE_DB.getUserDetails();
   const currentDetails = currentUser ? userDetails[currentUser.toLowerCase().trim()] : null;
   const canEditState = currentDetails ? currentDetails.canEditData !== false : true;
@@ -333,13 +304,7 @@ export default function App() {
                 />
               )}
 
-              {activeTab === 'agreste-chat' && (
-                <AgresteChat
-                  theme={theme}
-                  showToast={showToast}
-                  currentUser={currentUser}
-                />
-              )}
+
             </motion.div>
           </AnimatePresence>
         </main>

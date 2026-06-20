@@ -9,7 +9,7 @@ import { AGRESTE_DB } from '../services/db';
 import { 
   Users, MapPin, User, PlusCircle, CheckCircle, X, Search, 
   Trash2, Edit, ClipboardList, AlertTriangle, AlertCircle, Sparkles, Phone, Check,
-  FileSpreadsheet, FileText, UploadCloud
+  FileSpreadsheet, FileText, UploadCloud, Folder, FolderOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as XLSX from 'xlsx';
@@ -54,6 +54,12 @@ export default function ClientsTab({
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<'todos' | 'pago' | 'pendente'>('todos');
   const [selectedCity, setSelectedCity] = useState('todas');
   const [selectedReportStatus, setSelectedReportStatus] = useState<'todos' | 'com_relatorio' | 'sem_relatorio'>('todos');
+
+  // Subfolder state and filters for client reports
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+  const [folderReportSearch, setFolderReportSearch] = useState('');
+  const [folderPestsFilter, setFolderPestsFilter] = useState<'todos' | 'moscas' | 'baratas' | 'ratos' | 'formigas'>('todos');
+  const [folderDateSort, setFolderDateSort] = useState<'desc' | 'asc'>('desc');
 
   // Modals visibility states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -731,127 +737,361 @@ export default function ClientsTab({
               threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
               threeMonthsAgo.setHours(0,0,0,0);
               
-              if (reportDate >= threeMonthsAgo) {
-                const renewalDate = new Date(reportDate);
-                renewalDate.setMonth(renewalDate.getMonth() + 3);
-                recentReportInfo = {
-                  dateStr: reportDate.toLocaleDateString('pt-BR'),
-                  renewalDateStr: renewalDate.toLocaleDateString('pt-BR'),
-                  report: latestRep
-                };
+              const renewalDate = new Date(reportDate);
+              renewalDate.setMonth(renewalDate.getMonth() + 3);
+
+              const todayVal = new Date();
+              todayVal.setHours(0,0,0,0);
+              const targetExpiryVal = new Date(renewalDate);
+              targetExpiryVal.setHours(0,0,0,0);
+
+              const diffTime = targetExpiryVal.getTime() - todayVal.getTime();
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+              let statusColorClass = 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
+              let badgeText = `Relatório Ativo (Até ${renewalDate.toLocaleDateString('pt-BR')})`;
+
+              if (diffDays <= 7) {
+                statusColorClass = 'bg-rose-500/15 text-rose-450 dark:text-rose-400 border border-rose-550/30 animate-pulse font-bold';
+                badgeText = diffDays > 0 ? `Vence em ${diffDays} dias` : `Vencido (${renewalDate.toLocaleDateString('pt-BR')})`;
+              } else if (diffDays <= 14) {
+                statusColorClass = 'bg-amber-500/15 text-amber-500 border border-amber-500/30 font-semibold';
+                badgeText = `Vence em ${diffDays} dias`;
               }
+
+              recentReportInfo = {
+                dateStr: reportDate.toLocaleDateString('pt-BR'),
+                renewalDateStr: renewalDate.toLocaleDateString('pt-BR'),
+                report: latestRep,
+                statusColorClass,
+                badgeText,
+                diffDays
+              };
             }
 
+            const isFolderOpen = !!expandedFolders[client.id];
+
             return (
-              <div 
-                key={client.id}
-                className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
-                  client.isPendingConfirmation
-                    ? theme === 'dark'
-                      ? 'bg-amber-600/5 border-amber-500/70 relative shadow-[0_0_15px_rgba(245,158,11,0.15)] animate-[pulse_3s_infinite]'
-                      : 'bg-amber-50 border-amber-500 relative shadow-[0_0_15px_rgba(245,158,11,0.1)]'
-                    : theme === 'dark' 
-                      ? 'bg-[#1A1A1A] border-[#242424]' 
-                      : 'bg-white border-zinc-200 shadow-xs'
-                }`}
-              >
-                {/* Left Group: Code, Name, Details */}
-                <div className="flex items-start gap-3 flex-1 min-w-0">
-                  <div className="text-center shrink-0">
-                    <span className="text-[10px] font-bold font-mono px-2 py-1 bg-zinc-950/40 text-[#D35400] rounded-lg border border-zinc-900/30">
-                      Cód: {client.code || '001'}
-                    </span>
-                    <div className="mt-2 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase ${
-                        client.size === 'grande' 
-                          ? 'bg-[#D35400]/10 text-[#D35400]' 
-                          : 'bg-zinc-500/10 text-zinc-400'
-                      }`}>
-                        {client.size === 'grande' ? 'Grande' : 'Pequeno'}
+              <div key={client.id} className="space-y-2">
+                <div 
+                  className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
+                    client.isPendingConfirmation
+                      ? theme === 'dark'
+                        ? 'bg-amber-600/5 border-amber-500/70 relative shadow-[0_0_15px_rgba(245,158,11,0.15)] animate-[pulse_3s_infinite]'
+                        : 'bg-amber-50 border-amber-500 relative shadow-[0_0_15px_rgba(245,158,11,0.1)]'
+                      : theme === 'dark' 
+                        ? 'bg-[#1A1A1A] border-[#242424]' 
+                        : 'bg-white border-zinc-200 shadow-xs'
+                  }`}
+                >
+                  {/* Left Group: Code, Name, Details */}
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div className="text-center shrink-0">
+                      <span className="text-[10px] font-bold font-mono px-2 py-1 bg-zinc-950/40 text-[#D35400] rounded-lg border border-zinc-900/30">
+                        Cód: {client.code || '001'}
                       </span>
+                      <div className="mt-2 text-center">
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase ${
+                          client.size === 'grande' 
+                            ? 'bg-[#D35400]/10 text-[#D35400]' 
+                            : 'bg-zinc-500/10 text-zinc-400'
+                        }`}>
+                          {client.size === 'grande' ? 'Grande' : 'Pequeno'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="min-w-0 text-left">
+                      <h4 className="font-bold text-sm md:text-md text-zinc-200 dark:text-zinc-100 flex flex-wrap items-center gap-1.5 truncate">
+                        <span>{client.name}</span>
+                        {client.isPendingConfirmation && (
+                          <span className="text-[9px] px-2 py-0.5 bg-amber-600 text-white rounded-full font-extrabold uppercase tracking-wider animate-bounce inline-flex items-center gap-1 shrink-0">
+                            <Sparkles className="w-2.5 h-2.5 animate-spin" /> NOVO CADASTRO (CONFIRMAR)
+                          </span>
+                        )}
+                        {recentReportInfo && (
+                          <span 
+                            className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider inline-flex items-center gap-1 shrink-0 select-none shadow-sm ${recentReportInfo.statusColorClass}`}
+                            title={`Relatório ativo criado em ${recentReportInfo.dateStr}.` }
+                          >
+                            <CheckCircle className="w-3 h-3" /> {recentReportInfo.badgeText}
+                          </span>
+                        )}
+                      </h4>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-400 mt-1">
+                        <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-[#D35400]" /> {client.city}</span>
+                        <span className="text-zinc-650">•</span>
+                        <span className="flex items-center gap-1"><User className="w-3.5 h-3.5 text-[#D35400]" /> Resp: {client.responsible}</span>
+                        {client.phone && (
+                          <>
+                            <span className="text-zinc-650">•</span>
+                            <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-[#D35400]" /> Contato: {client.phone}</span>
+                          </>
+                        )}
+                        {client.createdBy_name && (
+                          <>
+                            <span className="text-zinc-650">•</span>
+                            <span className="flex items-center gap-1 text-[10px] font-bold text-[#E67E22] bg-[#D35400]/10 px-1.5 py-0.5 rounded-md border border-[#D35400]/10">
+                              Técnico: {client.createdBy_name}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="min-w-0 text-left">
-                    <h4 className="font-bold text-sm md:text-md text-zinc-200 dark:text-zinc-100 flex flex-wrap items-center gap-1.5 truncate">
-                      <span>{client.name}</span>
-                      {client.isPendingConfirmation && (
-                        <span className="text-[9px] px-2 py-0.5 bg-amber-600 text-white rounded-full font-extrabold uppercase tracking-wider animate-bounce inline-flex items-center gap-1 shrink-0">
-                          <Sparkles className="w-2.5 h-2.5 animate-spin" /> NOVO CADASTRO (CONFIRMAR)
-                        </span>
-                      )}
-                      {recentReportInfo && (
-                        <span 
-                          className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider inline-flex items-center gap-1 shrink-0 select-none bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm"
-                          title={`Relatório ativo criado em ${recentReportInfo.dateStr}.` }
+
+                  {/* Right Group: Visit/Delete actions (faturamento status display removed) */}
+                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-zinc-800/10 dark:border-[#242424]">
+                    <div className="flex items-center gap-1.5">
+                      {/* Subfolder reports toggle trigger */}
+                      <button
+                        onClick={() => {
+                          setExpandedFolders(prev => ({
+                            ...prev,
+                            [client.id]: !prev[client.id]
+                          }));
+                          setFolderReportSearch('');
+                          setFolderPestsFilter('todos');
+                        }}
+                        className={`px-3 py-2 border font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer ${
+                          isFolderOpen
+                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                            : 'bg-zinc-800/20 hover:bg-zinc-800/50 text-zinc-400 border-zinc-700/20'
+                        }`}
+                        title="Ver histórico de relatórios em subpasta"
+                      >
+                        {isFolderOpen ? <FolderOpen className="w-4 h-4 text-amber-500" /> : <Folder className="w-4 h-4 text-zinc-500" />}
+                        <span>Subpasta ({clientReports.length})</span>
+                      </button>
+
+                      {client.isPendingConfirmation && canEdit && (
+                        <button
+                          onClick={() => handleConfirmClient(client)}
+                          className="px-3 py-2 bg-gradient-to-r from-amber-600 to-amber-550 hover:from-amber-500 hover:to-amber-450 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-amber-500/15"
+                          title="Clique para contatar e confirmar o cadastro deste cliente"
                         >
-                          <CheckCircle className="w-3 h-3 text-emerald-400" /> Relatório Criado (Até {recentReportInfo.renewalDateStr})
-                        </span>
+                          <Check className="w-4 h-4" /> <span>Confirmar Cadastro e Contato</span>
+                        </button>
                       )}
-                    </h4>
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-400 mt-1">
-                    <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-[#D35400]" /> {client.city}</span>
-                    <span className="text-zinc-650">•</span>
-                    <span className="flex items-center gap-1"><User className="w-3.5 h-3.5 text-[#D35400]" /> Resp: {client.responsible}</span>
-                    {client.phone && (
-                      <>
-                        <span className="text-zinc-650">•</span>
-                        <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-[#D35400]" /> Contato: {client.phone}</span>
-                      </>
-                    )}
-                    {client.createdBy_name && (
-                      <>
-                        <span className="text-zinc-650">•</span>
-                        <span className="flex items-center gap-1 text-[10px] font-bold text-[#E67E22] bg-[#D35400]/10 px-1.5 py-0.5 rounded-md border border-[#D35400]/10">
-                          Técnico: {client.createdBy_name}
-                        </span>
-                      </>
-                    )}
+                      {canEdit && !client.isPendingConfirmation && (
+                        <button
+                          onClick={() => openVisitModal(client)}
+                          className="px-3 py-2 bg-[#D35400]/10 hover:bg-[#D35400] text-[#D35400] hover:text-white border border-[#D35400]/20 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <ClipboardList className="w-4 h-4 text-[#D35400] hover:text-white" /> <span>Realizar Visita</span>
+                        </button>
+                      )}
+                      {canModifyItem(client.createdBy) && (
+                        <button
+                          onClick={() => openEditModal(client)}
+                          className="p-2 hover:bg-[#D35400]/15 text-zinc-500 hover:text-[#D35400] rounded-xl transition-colors cursor-pointer"
+                          title="Editar Cliente"
+                        >
+                          <Edit className="w-4.5 h-4.5" />
+                        </button>
+                      )}
+                      {canModifyItem(client.createdBy) && (
+                        <button
+                          onClick={() => handleDeleteClient(client.id, client.name)}
+                          className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded-xl transition-colors cursor-pointer"
+                          title="Excluir Cliente"
+                        >
+                          <Trash2 className="w-4.5 h-4.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Right Group: Visit/Delete actions (faturamento status display removed) */}
-              <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-zinc-800/10 dark:border-[#242424]">
-                <div className="flex items-center gap-1.5">
-                  {client.isPendingConfirmation && canEdit && (
-                    <button
-                      onClick={() => handleConfirmClient(client)}
-                      className="px-3 py-2 bg-gradient-to-r from-amber-600 to-amber-550 hover:from-amber-500 hover:to-amber-450 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-amber-500/15"
-                      title="Clique para contatar e confirmar o cadastro deste cliente"
+                {/* Expansible Folder Sub-panel */}
+                <AnimatePresence>
+                  {isFolderOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className={`overflow-hidden rounded-xl border p-4 ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950/70 border-zinc-800/60'
+                          : 'bg-zinc-50 border-zinc-200/80 shadow-xs'
+                      }`}
                     >
-                      <Check className="w-4 h-4" /> <span>Confirmar Cadastro e Contato</span>
-                    </button>
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-zinc-800/10 dark:border-zinc-800/80 mb-4 animate-[fadeIn_0.2s_ease-out]">
+                        <div className="flex items-center gap-2">
+                          <FolderOpen className="w-5 h-5 text-orange-500" />
+                          <div>
+                            <h5 className="font-bold text-xs uppercase tracking-wide text-zinc-350 dark:text-zinc-200">Subpasta de Relatórios</h5>
+                            <p className="text-[10px] text-zinc-500">Histórico de laudos de visita técnica gerados</p>
+                          </div>
+                        </div>
+
+                        {/* Filters Container inside subfolder */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* Subfolder inner search bar */}
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500">
+                              <Search className="w-3 h-3" />
+                            </span>
+                            <input
+                              type="text"
+                              value={folderReportSearch}
+                              onChange={(e) => setFolderReportSearch(e.target.value)}
+                              placeholder="Filtrar por técnico, recomendações..."
+                              className={`py-1.5 pl-8 pr-3 rounded-lg border text-[10px] outline-none transition-all ${
+                                theme === 'dark'
+                                  ? 'bg-[#141414] border-[#242424] text-white focus:border-[#D35400]'
+                                  : 'bg-white border-zinc-200 text-zinc-700 focus:border-[#D35400]'
+                              }`}
+                            />
+                          </div>
+
+                          {/* Filter by pest treatment in subfolder */}
+                          <select
+                            value={folderPestsFilter}
+                            onChange={(e) => setFolderPestsFilter(e.target.value as any)}
+                            className={`py-1.5 px-2 rounded-lg border text-[10px] outline-none transition-all ${
+                              theme === 'dark'
+                                ? 'bg-zinc-950 border-zinc-800'
+                                : 'bg-white border-zinc-200 text-zinc-700'
+                            }`}
+                          >
+                            <option value="todos">Pragas: Todas</option>
+                            <option value="moscas">Mosca do Estábulo</option>
+                            <option value="baratas">Baratas / Insetos</option>
+                            <option value="ratos">Ratos / Roedores</option>
+                            <option value="formigas">Formigas de Açúcar</option>
+                          </select>
+
+                          {/* Sorting toggler button */}
+                          <button
+                            type="button"
+                            onClick={() => setFolderDateSort(prev => prev === 'desc' ? 'asc' : 'desc')}
+                            className={`px-2 py-1.5 rounded-lg border text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition-colors ${
+                              theme === 'dark'
+                                ? 'bg-[#141414] border-[#242424] text-zinc-300 hover:bg-zinc-800'
+                                : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-100'
+                            }`}
+                          >
+                            <span>Data: {folderDateSort === 'desc' ? 'Decrescente' : 'Crescente'}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Client reports list within the folder */}
+                      {(() => {
+                        // Apply filters to historical reports
+                        let processedFolderReports = [...clientReports];
+
+                        // Filter by text search
+                        if (folderReportSearch.trim()) {
+                          const query = folderReportSearch.toLowerCase().trim();
+                          processedFolderReports = processedFolderReports.filter(r => 
+                            (r.techName || '').toLowerCase().includes(query) ||
+                            (r.comments || '').toLowerCase().includes(query) ||
+                            (r.recommendations || '').toLowerCase().includes(query) ||
+                            (r.satisfaction || '').toLowerCase().includes(query)
+                          );
+                        }
+
+                        // Filter by pest treatment / presence
+                        if (folderPestsFilter !== 'todos') {
+                          processedFolderReports = processedFolderReports.filter(r => {
+                            const pestStatus = r.pests?.[folderPestsFilter as keyof typeof r.pests];
+                            return pestStatus && pestStatus !== 'sem_necessidade';
+                          });
+                        }
+
+                        // Sort reports by date
+                        processedFolderReports.sort((a, b) => {
+                          const timeA = new Date(a.date).getTime();
+                          const timeB = new Date(b.date).getTime();
+                          return folderDateSort === 'desc' ? timeB - timeA : timeA - timeB;
+                        });
+
+                        if (processedFolderReports.length === 0) {
+                          return (
+                            <div className="py-8 text-center text-zinc-500 font-medium text-xs border border-dashed border-zinc-800/10 dark:border-zinc-800/40 rounded-xl">
+                              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-zinc-600 animate-pulse" />
+                              <p>Nenhum laudo encontrado com os filtros aplicados nesta subpasta.</p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {processedFolderReports.map((report) => (
+                              <div
+                                key={report.id}
+                                className={`p-4 rounded-xl border flex flex-col justify-between gap-3 text-xs transition-colors ${
+                                  theme === 'dark'
+                                    ? 'bg-[#141414] border-zinc-805/40 hover:bg-zinc-910/70'
+                                    : 'bg-white border-zinc-200 shadow-xs'
+                                }`}
+                              >
+                                <div className="flex justify-between items-start gap-2">
+                                  <div>
+                                    <span className="text-[10px] bg-[#D35400]/10 text-[#D35400] px-2 py-0.5 rounded font-bold font-mono border border-[#D35400]/10">
+                                      {new Date(report.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                                    </span>
+                                    <h6 className="font-bold mt-1.5 text-zinc-250 dark:text-zinc-100 text-sm">Controle Mensal de Pragas</h6>
+                                    <p className="text-[10px] text-zinc-500 mt-0.5">Técnico Executor: <strong className="text-zinc-300">{report.techName || 'Adriano Senna'}</strong></p>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-[10px] border border-orange-500/10 bg-orange-500/10 text-orange-400 px-2 py-1 rounded-md font-extrabold uppercase">
+                                      {report.satisfaction}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-1 bg-zinc-955/20 dark:bg-zinc-950/40 p-2.5 rounded-lg border border-zinc-800/10 dark:border-zinc-900/60">
+                                  <div className="grid grid-cols-2 gap-2 text-[10px]">
+                                    <div>
+                                      <span className="text-zinc-500 block text-[9px] uppercase font-bold font-mono">Moscas:</span>
+                                      <span className={`font-bold text-[11px] ${report.pests?.moscas === 'sem_necessidade' ? 'text-zinc-500' : 'text-orange-400 font-extrabold'}`}>
+                                        {report.pests?.moscas === 'sem_necessidade' ? 'Sem necessidade' : (report.pests?.moscas?.replace('_', ' ') || 'Sob Controle')}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-zinc-500 block text-[9px] uppercase font-bold font-mono">Baratas:</span>
+                                      <span className={`font-bold text-[11px] ${report.pests?.baratas === 'sem_necessidade' ? 'text-zinc-500' : 'text-orange-400 font-extrabold'}`}>
+                                        {report.pests?.baratas === 'sem_necessidade' ? 'Sem necessidade' : (report.pests?.baratas?.replace('_', ' ') || 'Sob Controle')}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-zinc-500 block text-[9px] uppercase font-bold font-mono">Ratos:</span>
+                                      <span className={`font-bold text-[11px] ${report.pests?.ratos === 'sem_necessidade' ? 'text-zinc-500' : 'text-orange-400 font-extrabold'}`}>
+                                        {report.pests?.ratos === 'sem_necessidade' ? 'Sem necessidade' : (report.pests?.ratos?.replace('_', ' ') || 'Sob Controle')}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-zinc-500 block text-[9px] uppercase font-bold font-mono">Formigas:</span>
+                                      <span className={`font-bold text-[11px] ${report.pests?.formigas === 'sem_necessidade' ? 'text-zinc-500' : 'text-orange-400 font-extrabold'}`}>
+                                        {report.pests?.formigas === 'sem_necessidade' ? 'Sem necessidade' : (report.pests?.formigas?.replace('_', ' ') || 'Sob Controle')}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {report.comments && (
+                                  <p className="text-[11px] text-zinc-400 italic mt-0.5 border-l-2 border-orange-500/60 pl-2">
+                                    "{report.comments}"
+                                  </p>
+                                )}
+
+                                {report.recommendations && (
+                                  <div className="text-[10px] text-amber-500 bg-orange-500/5 hover:bg-orange-500/10 transition-colors py-1.5 px-2 rounded border border-orange-500/10">
+                                    <strong className="text-zinc-400">Recomendações:</strong> {report.recommendations}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </motion.div>
                   )}
-                  {canEdit && !client.isPendingConfirmation && (
-                    <button
-                      onClick={() => openVisitModal(client)}
-                      className="px-3 py-2 bg-[#D35400]/10 hover:bg-[#D35400] text-[#D35400] hover:text-white border border-[#D35400]/20 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
-                    >
-                      <ClipboardList className="w-4 h-4 text-[#D35400] hover:text-white" /> <span>Realizar Visita</span>
-                    </button>
-                  )}
-                  {canModifyItem(client.createdBy) && (
-                    <button
-                      onClick={() => openEditModal(client)}
-                      className="p-2 hover:bg-[#D35400]/15 text-zinc-500 hover:text-[#D35400] rounded-xl transition-colors cursor-pointer"
-                      title="Editar Cliente"
-                    >
-                      <Edit className="w-4.5 h-4.5" />
-                    </button>
-                  )}
-                  {canModifyItem(client.createdBy) && (
-                    <button
-                      onClick={() => handleDeleteClient(client.id, client.name)}
-                      className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded-xl transition-colors cursor-pointer"
-                      title="Excluir Cliente"
-                    >
-                      <Trash2 className="w-4.5 h-4.5" />
-                    </button>
-                  )}
-                </div>
+                </AnimatePresence>
               </div>
-            </div>
-          )})}
+            )})}
         </div>
       )}
 
@@ -1271,19 +1511,7 @@ export default function ClientsTab({
                       </select>
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider mb-2 text-zinc-400">Novas Indicações do Cliente (Opcional)</label>
-                      <input
-                        type="text"
-                        value={referrals}
-                        onChange={(e) => setReferrals(e.target.value)}
-                        placeholder="Nome ou contato indicado"
-                        id="report-referrals"
-                        className={`w-full py-2.5 px-3 rounded-xl border text-sm outline-none transition-all ${
-                          theme === 'dark' ? 'bg-zinc-950 border-zinc-800 focus:border-orange-500' : 'bg-zinc-100 border-zinc-200'
-                        }`}
-                      />
-                    </div>
+
                   </div>
 
                   <div>

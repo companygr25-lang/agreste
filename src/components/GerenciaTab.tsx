@@ -6,7 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle2, Circle, Plus, Edit3, Trash2, RotateCcw, 
-  Calendar, Check, AlertTriangle, Search, ClipboardList, Info, Sparkles
+  Calendar, Check, AlertTriangle, Search, ClipboardList, Info, Sparkles,
+  Play, FileText, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AGRESTE_DB } from '../services/db';
@@ -33,6 +34,17 @@ export default function GerenciaTab({ theme, showToast, canEdit = true }: Gerenc
   const [isAddMode, setIsAddMode] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDay, setNewDay] = useState<WeekdayUnion>('Segunda');
+  const [newPlannedTime, setNewPlannedTime] = useState('08:00');
+  const [newDetails, setNewDetails] = useState('');
+
+  // Details Modal state
+  const [detailedTask, setDetailedTask] = useState<ManagerTask | null>(null);
+  const [detailedNotes, setDetailedNotes] = useState('');
+  const [detailedPlannedTime, setDetailedPlannedTime] = useState('');
+  const [detailedDescription, setDetailedDescription] = useState('');
+
+  // Daily Report Modal
+  const [showDailyReportModal, setShowDailyReportModal] = useState(false);
 
   // Edit / Action Confirmation states
   const [editingTask, setEditingTask] = useState<ManagerTask | null>(null);
@@ -55,6 +67,86 @@ export default function GerenciaTab({ theme, showToast, canEdit = true }: Gerenc
     AGRESTE_DB.saveManagerTasks(updated);
   };
 
+  // Helper: start task tracking
+  const handleStartTask = (taskId: string) => {
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para alterar tarefas.', 'error');
+      return;
+    }
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const updated = tasks.map(t => {
+      if (t.id === taskId) {
+        return { ...t, startTime: timeStr };
+      }
+      return t;
+    });
+    saveTasksState(updated);
+    showToast('Tarefa iniciada! Horário de início registrado.', 'success');
+  };
+
+  // Helper: finish task tracking
+  const handleFinishTask = (taskId: string) => {
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para alterar tarefas.', 'error');
+      return;
+    }
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const updated = tasks.map(t => {
+      if (t.id === taskId) {
+        return { ...t, endTime: timeStr, completed: true };
+      }
+      return t;
+    });
+    saveTasksState(updated);
+    showToast('Tarefa finalizada e registrada com sucesso!', 'success');
+  };
+
+  // Helper: reset task times
+  const handleResetTaskTimes = (taskId: string) => {
+    if (!canEdit) {
+      showToast('Acesso apenas leitura: você não tem permissão para alterar tarefas.', 'error');
+      return;
+    }
+    const updated = tasks.map(t => {
+      if (t.id === taskId) {
+        return { ...t, startTime: undefined, endTime: undefined, completed: false };
+      }
+      return t;
+    });
+    saveTasksState(updated);
+    showToast('Horários e status de conclusão limpados!', 'info');
+  };
+
+  // Open Details Modal with pre-populated values
+  const handleOpenDetails = (task: ManagerTask) => {
+    setDetailedTask(task);
+    setDetailedNotes(task.notes || '');
+    setDetailedPlannedTime(task.plannedTime || '08:00');
+    setDetailedDescription(task.details || '');
+  };
+
+  // Save Details Modal modifications
+  const handleSaveDetails = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!detailedTask) return;
+    const updated = tasks.map(t => {
+      if (t.id === detailedTask.id) {
+        return {
+          ...t,
+          plannedTime: detailedPlannedTime,
+          notes: detailedNotes,
+          details: detailedDescription,
+        };
+      }
+      return t;
+    });
+    saveTasksState(updated);
+    setDetailedTask(null);
+    showToast('Detalhes e horários atualizados com sucesso!', 'success');
+  };
+
   // Helper: toggle task completion
   const handleToggleTask = (taskId: string) => {
     if (!canEdit) {
@@ -64,11 +156,17 @@ export default function GerenciaTab({ theme, showToast, canEdit = true }: Gerenc
     const updated = tasks.map(t => {
       if (t.id === taskId) {
         const nextStatus = !t.completed;
+        const nowStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         showToast(
-          nextStatus ? 'Tarefa marcada como Concluída! 🎯' : 'Tarefa marcada como Pendente.',
+          nextStatus ? 'Tarefa concluída! Horários registrados.' : 'Tarefa marcada como pendente.',
           nextStatus ? 'success' : 'info'
         );
-        return { ...t, completed: nextStatus };
+        return {
+          ...t,
+          completed: nextStatus,
+          startTime: nextStatus ? (t.startTime || nowStr) : undefined,
+          endTime: nextStatus ? (t.endTime || nowStr) : undefined
+        };
       }
       return t;
     });
@@ -92,11 +190,15 @@ export default function GerenciaTab({ theme, showToast, canEdit = true }: Gerenc
       day: newDay,
       title: newTitle.trim(),
       completed: false,
-      isCustom: true
+      isCustom: true,
+      plannedTime: newPlannedTime,
+      details: newDetails.trim()
     };
 
     saveTasksState([...tasks, newTask]);
     setNewTitle('');
+    setNewPlannedTime('08:00');
+    setNewDetails('');
     setIsAddMode(false);
     setSelectedDay(newDay); // switch view to the added task's day
     showToast('Nova tarefa adicionada com sucesso!', 'success');
@@ -125,7 +227,11 @@ export default function GerenciaTab({ theme, showToast, canEdit = true }: Gerenc
 
   // Trigger confirmation prompt for Edit
   const triggerEdit = (task: ManagerTask) => {
-    setEditingTask(task);
+    setEditingTask({
+      ...task,
+      plannedTime: task.plannedTime || '08:00',
+      details: task.details || ''
+    });
     setEditTitle(task.title);
   };
 
@@ -141,7 +247,12 @@ export default function GerenciaTab({ theme, showToast, canEdit = true }: Gerenc
     setConfirmModal({
       type: 'edit',
       taskId: editingTask.id,
-      payload: { ...editingTask, title: editTitle.trim() },
+      payload: { 
+        ...editingTask, 
+        title: editTitle.trim(),
+        plannedTime: editingTask.plannedTime || '08:00',
+        details: editingTask.details || ''
+      },
       message: `Deseja salvar as alterações feitas no item "${editingTask.title}"?`
     });
   };
@@ -267,13 +378,23 @@ export default function GerenciaTab({ theme, showToast, canEdit = true }: Gerenc
             <Plus className="w-4 h-4" />
             Nova Tarefa
           </button>
+
+          <button
+            onClick={() => setShowDailyReportModal(true)}
+            id="btn-generate-daily-report"
+            className="px-3.5 py-2 text-xs font-bold bg-emerald-600 text-white rounded-xl shadow-md cursor-pointer hover:bg-emerald-500 transition-colors flex items-center gap-1.5 active:scale-95"
+            title="Gerar Relatório Diário de Atividades"
+          >
+            <FileText className="w-4 h-4" />
+            Gerar Relatório Diário
+          </button>
           
           <button
             onClick={triggerReset}
             id="btn-reset-manager-tasks"
             className={`px-3 py-2 text-xs font-semibold rounded-xl cursor-pointer transition-colors flex items-center gap-1.5 ${
               theme === 'dark'
-                ? 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-805'
+                ? 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-850'
                 : 'bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-700'
             }`}
             title="Reiniciar progresso de todas as tarefas"
@@ -473,61 +594,145 @@ export default function GerenciaTab({ theme, showToast, canEdit = true }: Gerenc
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.15, delay: idx * 0.02 }}
-                className={`p-4 rounded-xl border flex items-center justify-between gap-4 transition-all ${
+                className={`p-4 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${
                   task.completed 
                     ? theme === 'dark'
-                      ? 'border-emerald-505/30 bg-emerald-950/15'
+                      ? 'border-emerald-500/30 bg-emerald-950/15'
                       : 'border-emerald-500/20 bg-emerald-50/50'
                     : theme === 'dark'
                       ? 'border-zinc-800 bg-[#161618] hover:border-zinc-700' 
                       : 'border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-2xs'
                 }`}
               >
-                <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                  <button
-                    onClick={() => handleToggleTask(task.id)}
-                    className="mt-0.5 text-[#D35400] hover:text-[#E67E22] transition-transform duration-100 transform active:scale-90 shrink-0 cursor-pointer"
-                  >
-                    {task.completed ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-500 fill-emerald-500/10" />
-                    ) : (
-                      <Circle className="w-5 h-5 text-zinc-500" />
-                    )}
-                  </button>
+                {/* Horizontal Group: Left Hours, Checkbox/Title */}
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  
+                  {/* Left Planned Time Badge */}
+                  <div className={`flex flex-col items-center justify-center shrink-0 w-14 text-center pr-3 border-r select-none ${
+                    theme === 'dark' ? 'border-zinc-805 bg-black/10 rounded-lg p-1 py-1 px-1.5' : 'border-zinc-200 bg-zinc-100 rounded-lg p-1 py-1 px-1.5'
+                  }`}>
+                    <span className={`font-mono text-xs font-bold leading-none ${theme === 'dark' ? 'text-orange-400' : 'text-orange-600'}`}>
+                      {task.plannedTime || '08:00'}
+                    </span>
+                    <span className="text-[7.5px] uppercase tracking-wider text-zinc-500 font-extrabold mt-1">
+                      Horário
+                    </span>
+                  </div>
 
-                  <div className="min-w-0 flex-1">
-                    <p className={`text-xs font-bold leading-relaxed ${
-                      task.completed 
-                        ? 'line-through text-zinc-500 dark:text-zinc-500 font-normal' 
-                        : theme === 'dark'
-                          ? 'text-zinc-100'
-                          : 'text-zinc-900'
-                    }`}>
-                      {task.title}
-                    </p>
-                    
-                    {task.completed && (
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className="text-[8px] font-mono font-semibold text-emerald-500 flex items-center gap-0.5">
-                          ✓ realizado
-                        </span>
+                  {/* Checkbox and Text */}
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <button
+                      onClick={() => handleToggleTask(task.id)}
+                      className="mt-0.5 text-[#D35400] hover:text-[#E67E22] transition-transform duration-100 transform active:scale-90 shrink-0 cursor-pointer"
+                    >
+                      {task.completed ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500 fill-emerald-500/10" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-zinc-500" />
+                      )}
+                    </button>
+
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className={`text-xs font-bold leading-relaxed ${
+                        task.completed 
+                          ? 'line-through text-zinc-500 dark:text-zinc-500 font-normal' 
+                          : theme === 'dark'
+                            ? 'text-zinc-100'
+                            : 'text-zinc-900'
+                      }`}>
+                        {task.title}
+                      </p>
+                      
+                      {/* Sub-badge times tracking */}
+                      <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                        {task.startTime && (
+                          <span className={`text-[9.5px] font-mono font-medium px-2 py-0.5 rounded-md border ${
+                            theme === 'dark' ? 'bg-zinc-900 border-zinc-800 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-650'
+                          }`}>
+                            Início: <strong className="text-orange-500">{task.startTime}</strong>
+                          </span>
+                        )}
+                        {task.endTime && (
+                          <span className={`text-[9.5px] font-mono font-medium px-2 py-0.5 rounded-md border ${
+                            theme === 'dark' ? 'bg-zinc-900 border-emerald-950/35 text-emerald-400' : 'bg-emerald-50/70 border-emerald-100 text-emerald-700'
+                          }`}>
+                            Término: <strong className="text-emerald-500">{task.endTime}</strong>
+                          </span>
+                        )}
+                        {!task.startTime && !task.endTime && (
+                          <span className="text-[8px] uppercase tracking-widest text-[#D35400]/80 font-bold block">
+                            • Pendente
+                          </span>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Operations Buttons: Edit and Delete */}
-                <div className="flex items-center gap-1 shrink-0">
+                {/* Operations & Action Tracker Buttons */}
+                <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end">
+                  
+                  {/* Action Tracker Trigger */}
+                  {!task.startTime && !task.completed && (
+                    <button
+                      onClick={() => handleStartTask(task.id)}
+                      className="px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wide rounded-lg bg-emerald-600/10 text-emerald-505 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+                    >
+                      <Play className="w-2.5 h-2.5 fill-current" />
+                      Iniciar
+                    </button>
+                  )}
+                  
+                  {task.startTime && !task.endTime && (
+                    <button
+                      onClick={() => handleFinishTask(task.id)}
+                      className="px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wide rounded-lg bg-red-600/10 text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white transition-all cursor-pointer flex items-center gap-1 active:scale-95 animate-pulse"
+                    >
+                      <Check className="w-3 h-3 text-red-500" />
+                      Finalizar
+                    </button>
+                  )}
+
+                  {task.startTime && task.endTime && (
+                    <button
+                      onClick={() => handleResetTaskTimes(task.id)}
+                      className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                        theme === 'dark'
+                          ? 'bg-zinc-900 text-zinc-500 border-zinc-850 hover:text-zinc-300'
+                          : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-400 border-zinc-200 hover:text-zinc-700'
+                      }`}
+                      title="Reiniciar Horários de Execução"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+
+                  {/* Details Button */}
+                  <button
+                    onClick={() => handleOpenDetails(task)}
+                    className={`px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wide rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+                      theme === 'dark'
+                        ? 'bg-zinc-900 text-zinc-300 border-zinc-850 hover:bg-zinc-800'
+                        : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-700 border-zinc-200'
+                    }`}
+                  >
+                    <Info className="w-3 h-3 text-[#D35400]" />
+                    Detalhes
+                  </button>
+
+                  <div className={`h-6 w-[1px] ${theme === 'dark' ? 'bg-zinc-800' : 'bg-zinc-200'}`} />
+
+                  {/* Quick Edit/Delete */}
                   <button
                     onClick={() => triggerEdit(task)}
-                    className="p-1.5 rounded-lg text-zinc-500 hover:text-[#D35400] hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg text-zinc-500 hover:text-[#D35400] hover:bg-zinc-800/20 transition-colors cursor-pointer"
                     title="Editar afazer"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => triggerDelete(task.id, task.title)}
-                    className="p-1.5 rounded-lg text-zinc-500 hover:text-red-500 hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg text-zinc-500 hover:text-red-500 hover:bg-zinc-800/20 transition-colors cursor-pointer"
                     title="Excluir afazer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -636,17 +841,42 @@ export default function GerenciaTab({ theme, showToast, canEdit = true }: Gerenc
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-zinc-400 font-mono font-bold uppercase tracking-wider block">Dia de Atuação:</label>
+                  <select
+                    value={newDay}
+                    onChange={(e) => setNewDay(e.target.value as WeekdayUnion)}
+                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-900 rounded-xl text-xs text-white focus:outline-hidden"
+                  >
+                    {days.map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-zinc-400 font-mono font-bold uppercase tracking-wider block">Horário Previsto:</label>
+                  <input
+                    type="text"
+                    required
+                    value={newPlannedTime}
+                    onChange={(e) => setNewPlannedTime(e.target.value)}
+                    placeholder="EX: 08:30"
+                    className="w-full px-3 py-2 bg-zinc-950 border border-[#D35400]/20 rounded-xl text-xs text-white focus:outline-hidden focus:ring-1 focus:ring-[#D35400]"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
-                <label className="text-[10px] text-zinc-400 font-mono font-bold uppercase tracking-wider block">Dia de Atuação:</label>
-                <select
-                  value={newDay}
-                  onChange={(e) => setNewDay(e.target.value as WeekdayUnion)}
-                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-900 rounded-xl text-xs text-white focus:outline-hidden"
-                >
-                  {days.map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
+                <label className="text-[10px] text-zinc-400 font-mono font-bold uppercase tracking-wider block">Procedimento / Detalhes (Diretrizes):</label>
+                <textarea
+                  value={newDetails}
+                  onChange={(e) => setNewDetails(e.target.value)}
+                  placeholder="EX: Descrever passos prioritários e cuidados regulatórios..."
+                  rows={2}
+                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-900 rounded-xl text-xs text-white focus:outline-hidden focus:ring-1 focus:ring-[#D35400]"
+                />
               </div>
 
               <div className="pt-2 flex justify-end gap-2 text-xs">
@@ -672,7 +902,7 @@ export default function GerenciaTab({ theme, showToast, canEdit = true }: Gerenc
       {/* EDIT EXISTING TASK DIALOG WITH CONFIRMATION */}
       <AnimatePresence>
         {editingTask && (
-          <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="fixed inset-0 bg-black/75 z-55 flex items-center justify-center p-4 backdrop-blur-xs">
             <motion.form
               onSubmit={handleSaveEdit}
               initial={{ scale: 0.95, opacity: 0 }}
@@ -700,17 +930,42 @@ export default function GerenciaTab({ theme, showToast, canEdit = true }: Gerenc
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-zinc-400 font-mono font-bold uppercase tracking-wider block">Dia da Semana:</label>
+                  <select
+                    value={editingTask.day}
+                    onChange={(e) => setEditingTask({ ...editingTask, day: e.target.value as WeekdayUnion })}
+                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-900 rounded-xl text-xs text-white focus:outline-hidden"
+                  >
+                    {days.map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-zinc-400 font-mono font-bold uppercase tracking-wider block">Horário Previsto:</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingTask.plannedTime || '08:00'}
+                    onChange={(e) => setEditingTask({ ...editingTask, plannedTime: e.target.value })}
+                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-900 rounded-xl text-xs text-white focus:outline-hidden focus:ring-1 focus:ring-[#D35400]"
+                    placeholder="EX: 08:30"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
-                <label className="text-[10px] text-zinc-400 font-mono font-bold uppercase tracking-wider block">Dia da Semana:</label>
-                <select
-                  value={editingTask.day}
-                  onChange={(e) => setEditingTask({ ...editingTask, day: e.target.value as WeekdayUnion })}
-                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-900 rounded-xl text-xs text-white focus:outline-hidden"
-                >
-                  {days.map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
+                <label className="text-[10px] text-zinc-400 font-mono font-bold uppercase tracking-wider block">Procedimento / Detalhes:</label>
+                <textarea
+                  value={editingTask.details || ''}
+                  onChange={(e) => setEditingTask({ ...editingTask, details: e.target.value })}
+                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-900 rounded-xl text-xs text-white focus:outline-hidden focus:ring-1 focus:ring-[#D35400]"
+                  placeholder="EX: Passos operacionais detalhados..."
+                  rows={2}
+                />
               </div>
 
               <div className="pt-2 flex justify-end gap-2 text-xs">
@@ -729,6 +984,253 @@ export default function GerenciaTab({ theme, showToast, canEdit = true }: Gerenc
                 </button>
               </div>
             </motion.form>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* DETAILED TASK VIEW & NOTES EDITOR MODAL */}
+      <AnimatePresence>
+        {detailedTask && (
+          <div className="fixed inset-0 bg-black/85 z-55 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+            <motion.form
+              onSubmit={handleSaveDetails}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#141414] border border-zinc-805 rounded-2xl max-w-lg w-full p-6 text-left shadow-2xl space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
+                <div>
+                  <h3 className="text-xs font-mono font-bold uppercase text-[#D35400] tracking-widest">
+                    Procedimento Detalhado do Checklist
+                  </h3>
+                  <h2 className="text-md font-extrabold text-zinc-100 font-display mt-1">
+                    {detailedTask.title}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDetailedTask(null)}
+                  className="p-1 text-zinc-500 hover:text-white transition-colors rounded-lg hover:bg-zinc-800 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pb-2 border-b border-zinc-900/40">
+                <div>
+                  <label className="text-[9px] text-zinc-500 font-mono font-bold uppercase tracking-wider block">Dia da Atividade:</label>
+                  <span className="text-zinc-200 text-xs font-semibold block mt-1 bg-zinc-950 px-2.5 py-1.5 rounded-lg border border-zinc-900">
+                    {detailedTask.day}
+                  </span>
+                </div>
+                <div>
+                  <label className="text-[9px] text-zinc-500 font-mono font-bold uppercase tracking-wider block">Horário Previsto (Lado Esquerdo):</label>
+                  <input
+                    type="text"
+                    required
+                    value={detailedPlannedTime}
+                    onChange={(e) => setDetailedPlannedTime(e.target.value)}
+                    placeholder="EX: 08:00"
+                    className="w-full text-zinc-200 text-xs font-semibold mt-1 bg-zinc-950 px-2.5 py-1.5 rounded-lg border border-[#D35400]/25 focus:outline-[#D35400] focus:ring-1 focus:ring-[#D35400]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] text-[#D35400] font-mono font-bold uppercase tracking-wider block">Diretrizes / Detalhes da Tarefa:</label>
+                <textarea
+                  value={detailedDescription}
+                  onChange={(e) => setDetailedDescription(e.target.value)}
+                  placeholder="Instruções padrão do checklist ou orientações de conformidade..."
+                  rows={2}
+                  className="w-full p-2.5 bg-zinc-950 border border-zinc-900 rounded-xl text-xs text-zinc-100 focus:outline-[#D35400] focus:ring-1 focus:ring-[#D35400] leading-relaxed"
+                />
+              </div>
+
+              <div className="p-3 bg-zinc-950 border border-zinc-900 rounded-xl space-y-2">
+                <h4 className="text-[9px] text-zinc-500 font-mono font-bold uppercase tracking-wider">Histórico de Conclusão e Ponto Eletrônico:</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-[10px] text-zinc-500 block">Horário Início:</span>
+                    <span className="font-mono text-zinc-300 block font-semibold mt-0.5">
+                      {detailedTask.startTime ? `🟢 ${detailedTask.startTime}` : '❌ Não Iniciado'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-zinc-500 block">Horário Término:</span>
+                    <span className="font-mono text-zinc-300 block font-semibold mt-0.5">
+                      {detailedTask.endTime ? `🏁 ${detailedTask.endTime}` : '❌ Não Finalizado'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] text-zinc-400 font-mono font-bold uppercase tracking-wider block">Notas de Execução / Ocorrências (Para Relatório):</label>
+                <textarea
+                  value={detailedNotes}
+                  onChange={(e) => setDetailedNotes(e.target.value)}
+                  placeholder="Relatório de inconformidades, avarias, consumo ou justificação de atrasos..."
+                  rows={2}
+                  className="w-full p-2.5 bg-zinc-950 border border-zinc-850 rounded-xl text-xs text-zinc-100 focus:outline-[#D35400] focus:ring-1 focus:ring-[#D35400] leading-relaxed"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2 text-xs border-t border-zinc-900">
+                <button
+                  type="button"
+                  onClick={() => setDetailedTask(null)}
+                  className="px-4 py-2 bg-zinc-900 text-zinc-400 hover:text-white rounded-xl cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#D35400] hover:bg-[#E67E22] text-white font-extrabold rounded-xl cursor-pointer shadow-md"
+                >
+                  Salvar Detalhes
+                </button>
+              </div>
+            </motion.form>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* DAILY CHECKLIST ROUTINE REPORT (PDF-PRINTABLE) */}
+      <AnimatePresence>
+        {showDailyReportModal && (
+          <div className="fixed inset-0 bg-black/85 z-55 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#141414] border border-zinc-805 rounded-2xl max-w-3xl w-full p-6 text-left shadow-2xl space-y-4 relative"
+            >
+              {/* Header with Print buttons */}
+              <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
+                <div>
+                  <h2 className="text-sm font-extrabold text-[#D35400] font-sans uppercase tracking-widest">
+                    RELATÓRIO DIÁRIO DE ATIVIDADES
+                  </h2>
+                  <p className="text-[10px] text-zinc-400">
+                    Geração de dossiê de obrigações com hora programada vs hora realizada.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => window.print()}
+                    className="px-3 py-1.5 text-[10px] font-extrabold uppercase bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow transition-all cursor-pointer"
+                  >
+                    Imprimir Relatório
+                  </button>
+                  <button
+                    onClick={() => setShowDailyReportModal(false)}
+                    className="p-1 text-zinc-500 hover:text-white transition-colors rounded-lg bg-zinc-900 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Printable Area content wrapper */}
+              <div id="activity-report-print-target" className="space-y-4 p-4 bg-zinc-950 border border-zinc-900 rounded-xl text-zinc-100 font-sans">
+                {/* Dossiê Heading */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-zinc-900 pb-3">
+                  <div>
+                    <h1 className="text-md font-black tracking-tight text-white uppercase">AGRESTE SANEAMENTO INTEGRAL</h1>
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase">Laudo de Ponto de Atividades • Gerência Geral</span>
+                  </div>
+                  <div className="text-right sm:text-right text-[10px] font-mono">
+                    <p>Dia Selecionado: <strong className="text-orange-400">{selectedDay.toUpperCase()}</strong></p>
+                    <p>Data de Emissão: <strong className="text-zinc-300">{getDayDateLabel(selectedDay)} / {new Date().getFullYear()}</strong></p>
+                  </div>
+                </div>
+
+                {/* Checklist Report Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[10px] text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-zinc-950 text-zinc-550 uppercase tracking-widest font-mono text-[8px]">
+                        <th className="py-2 pr-2">Horário Previsto</th>
+                        <th className="py-2 pr-2">Tarefa / Obrigações do Expediente</th>
+                        <th className="py-2 pr-2">Início Real</th>
+                        <th className="py-2 pr-2">Conclusão Real</th>
+                        <th className="py-2 px-2 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-900">
+                      {tasks.filter(t => t.day === selectedDay).length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-4 text-center text-zinc-400 italic">
+                            Nenhum encargo programado para este determinado dia.
+                          </td>
+                        </tr>
+                      ) : (
+                        tasks.filter(t => t.day === selectedDay).map((t) => {
+                          let statusLabel = 'Pendente';
+                          let statusClass = 'bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded-full font-bold border border-rose-500/10';
+                          if (t.completed) {
+                            statusLabel = 'Realizada';
+                            statusClass = 'bg-emerald-600/15 text-emerald-400 px-2 py-0.5 rounded-full font-bold border border-emerald-555/15';
+                          } else if (t.startTime) {
+                            statusLabel = 'Em Progresso';
+                            statusClass = 'bg-amber-600/15 text-amber-500 px-2 py-0.5 rounded-full font-bold border border-amber-500/10';
+                          }
+                          
+                          return (
+                            <tr key={t.id} className="hover:bg-zinc-900/30 transition-colors">
+                              <td className="py-3 font-semibold font-mono text-zinc-400">{t.plannedTime || '08:00'}</td>
+                              <td className="py-3 pr-2">
+                                <p className="font-bold text-zinc-200">{t.title}</p>
+                                {t.details && <p className="text-[9px] text-zinc-500 mt-0.5">{t.details}</p>}
+                                {t.notes && <p className="text-[9px] text-orange-400 mt-1 italic">Obs: {t.notes}</p>}
+                              </td>
+                              <td className="py-3 font-mono text-zinc-400">{t.startTime || '--:--'}</td>
+                              <td className="py-3 font-mono text-emerald-500">{t.endTime || '--:--'}</td>
+                              <td className="py-3 px-2 text-center">
+                                <span className={statusClass}>
+                                  {statusLabel}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Signatures and Endorsements block */}
+                <div className="grid grid-cols-2 gap-4 pt-6 mt-6 border-t border-zinc-900 text-center text-[9px] text-zinc-500">
+                  <div className="border-t border-dashed border-zinc-800 pt-2">
+                    <p className="font-bold uppercase text-zinc-400">GIL SILVA</p>
+                    <p>Administrador Responsável</p>
+                  </div>
+                  <div className="border-t border-dashed border-zinc-800 pt-2">
+                    <p className="font-bold uppercase text-zinc-400">DIRETORIA OPERACIONAL</p>
+                    <p>AGRESTE Saneamento</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Instructions and Close actions */}
+              <div className="text-[10px] text-zinc-500 bg-zinc-950/40 p-3 rounded-lg flex items-start gap-2">
+                <Info className="w-3.5 h-3.5 text-[#D35400] shrink-0 mt-0.5" />
+                <span>Para exportar em formato PDF de forma nativa ou enviar para a diretoria, clique em <strong>Imprimir Relatório</strong> e selecione a opção de destino <strong>"Salvar como PDF"</strong>.</span>
+              </div>
+
+              <div className="flex justify-end gap-2 text-xs pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDailyReportModal(false)}
+                  className="px-4 py-2 bg-zinc-900 text-zinc-400 hover:text-white rounded-xl shadow cursor-pointer font-semibold"
+                >
+                  Fechar Visualização
+                </button>
+              </div>
+
+            </motion.div>
           </div>
         )}
       </AnimatePresence>

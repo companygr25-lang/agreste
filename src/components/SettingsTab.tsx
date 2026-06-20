@@ -412,6 +412,127 @@ export default function SettingsTab({
             )}
           </div>
         </div>
+
+        {/* Database & Supabase Checkups */}
+        <div className={`p-6 rounded-2xl border ${
+          theme === 'dark' ? 'bg-[#151515] border-zinc-900' : 'bg-white border-zinc-200 shadow-sm'
+        } text-left mt-6`}>
+          <div className="flex items-center gap-2 mb-4 text-xs font-bold uppercase tracking-wider text-[#D35400]">
+            <Database className="w-4 h-4" /> Diagnóstico e Integração de Rede (Banco de Dados)
+          </div>
+          
+          <p className="text-xs text-zinc-500 mb-5">
+            ÁREA DO ADMINISTRADOR: Certifique-se de que a estrutura de tabelas do banco de dados (Supabase & Vercel) está saudável e pronta para a sincronização remota assíncrona.
+          </p>
+
+          {!isSupabaseConfigured() && (
+            <div className="mb-5 p-4 rounded-xl border border-[#D35400]/20 bg-[#D35400]/0.05 text-xs text-left">
+              <div className="flex items-start gap-2.5">
+                <Info className="w-4 h-4 text-[#D35400] shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold text-[#D35400] block uppercase tracking-wider mb-1 text-[10px]">Configuração de Credenciais Supabase</span>
+                  <p className="text-zinc-400 leading-relaxed mb-3 text-[11px]">
+                    Para conectar seu banco de dados Supabase e buckets de mídia reais de forma segura, acesse as configurações de <strong>Secrets (Segredos)</strong> no menu do <strong>Google AI Studio</strong> e cadastre as variáveis de ambiente com o prefixo <code>VITE_</code> abaixo:
+                  </p>
+                  <div className="space-y-1.5 font-mono text-[10.5px] bg-black/40 p-2.5 rounded border border-zinc-800 select-all text-zinc-300">
+                    <div><strong className="text-[#D35400]">VITE_SUPABASE_URL</strong>: <code>https://SEU-PROJETO.supabase.co</code></div>
+                    <div><strong className="text-[#D35400]">VITE_SUPABASE_ANON_KEY</strong>: <code>eyJhbGciOi...</code></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {checkingDb ? (
+            <div className="py-6 text-center text-xs animate-pulse text-orange-500 flex items-center justify-center gap-2 font-mono">
+              <Clock className="w-4 h-4 animate-spin" /> Escaneando tabelas remotas...
+            </div>
+          ) : dbStatusResult ? (
+            <div className="space-y-4 mb-4">
+              <div className="p-3 bg-[#E67E22]/10 border border-[#D35400]/20 rounded-xl text-xs flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold text-zinc-200 dark:text-zinc-100 block">Conexão Saudável</span>
+                  <span className="text-zinc-500 text-[11px] block mt-0.5">Adaptador modular local sincronizado com a latência de {dbStatusResult.latencyMs}ms.</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[11px] font-mono p-3 bg-zinc-950/30 rounded-xl border border-zinc-850">
+                <div>
+                  <span className="text-zinc-500">Status Gateway:</span>
+                  <span className="text-emerald-400 font-bold block">{dbStatusResult.status}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500">Canal Ativo:</span>
+                  <span className="text-orange-500 font-bold block">{dbStatusResult.provider}</span>
+                </div>
+                <div className="col-span-2 pt-2 mt-2 border-t border-zinc-850/60">
+                  <span className="text-zinc-500 block mb-1">Tabelas Locais Monitoradas:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {dbStatusResult.tables.map((tbl: string) => (
+                      <span key={tbl} className="px-1.5 py-0.5 bg-zinc-800 text-[9px] font-bold text-zinc-300 rounded border border-zinc-700">{tbl}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="flex flex-col sm:grid sm:grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={handleTestDatabase}
+              id="test-database-btn"
+              className="py-2.5 bg-[#D35400] hover:bg-[#FC6B0A] text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+            >
+              <Database className="w-3.5 h-3.5" /> Testar Banco Supabase
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => {
+                showToast('Estrutura de tabelas (SQL) copiada para o console de desenvolvimento. Abra-o com F12.', 'info');
+                console.log(`
+-- =========================================================
+-- SCHEMA DE PORTABILIDADE E CONEXÃO EM TEMPO REAL - AGRESTE
+-- Execute este comando no console SQL (SQL Editor) do seu Supabase:
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS public.agreste_sync (
+    key text PRIMARY KEY,
+    data jsonb NOT NULL,
+    updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Habilitar replicação em tempo real para sincronia instantânea
+ALTER PUBLICATION supabase_realtime ADD TABLE public.agreste_sync;
+
+-- Habilitar permissões públicas se autenticação de anon for habilitada
+ALTER TABLE public.agreste_sync ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read and write access" ON public.agreste_sync
+    FOR ALL USING (true) WITH CHECK (true);
+
+console.log('SQL IMPRESSO COM SUCESSO - PRONTO PARA COPIAR');
+                `);
+              }}
+              id="export-schema-btn"
+              className={`py-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${
+                theme === 'dark' ? 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-650'
+              }`}
+            >
+              <FileCode className="w-3.5 h-3.5" /> Ver SQL Schema
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowResetConfirm(true)}
+              id="reset-database-btn"
+              className="col-span-2 py-2.5 bg-red-650/10 hover:bg-red-600 border border-red-500/25 hover:border-red-650 text-red-500 hover:text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Zerar Banco de Dados
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -469,130 +590,6 @@ export default function SettingsTab({
               >
                 <Moon className="w-5 h-5" />
                 <span className="text-xs font-bold">Modo AGRESTE Escuro</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Database & Supabase Checkups */}
-          <div className={`p-6 rounded-2xl border ${
-            theme === 'dark' ? 'bg-[#1A1A1A] border-[#242424]' : 'bg-white border-zinc-200 shadow-sm'
-          }`}>
-            <div className="flex items-center gap-2 mb-4 text-xs font-bold uppercase tracking-wider text-[#D35400]">
-              <Database className="w-4 h-4" /> Diagnóstico e Integração de Rede
-            </div>
-            
-            <p className="text-xs text-zinc-500 mb-5">
-              Certifique-se de que a estrutura de tabelas do banco de dados (Supabase & Vercel) está saudável e pronta para a sincronização remota assíncrona.
-            </p>
-
-            {!isSupabaseConfigured() && (
-              <div className="mb-5 p-4 rounded-xl border border-[#D35400]/20 bg-[#D35400]/5 text-xs text-left">
-                <div className="flex items-start gap-2.5">
-                  <Info className="w-4 h-4 text-[#D35400] shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold text-[#D35400] block uppercase tracking-wider mb-1 text-[10px]">Configuração de Credenciais Supabase</span>
-                    <p className="text-zinc-400 leading-relaxed mb-3 text-[11px]">
-                      Para conectar seu banco de dados Supabase e buckets de mídia reais de forma segura, acesse as configurações de <strong>Secrets (Segredos)</strong> no menu do <strong>Google AI Studio</strong> e cadastre as variáveis de ambiente com o prefixo <code>VITE_</code> abaixo:
-                    </p>
-                    <div className="space-y-1.5 font-mono text-[10.5px] bg-black/40 p-2.5 rounded border border-zinc-800 select-all text-zinc-300">
-                      <div><strong className="text-[#D35400]">VITE_SUPABASE_URL</strong>: <code>https://SEU-PROJETO.supabase.co</code></div>
-                      <div><strong className="text-[#D35400]">VITE_SUPABASE_ANON_KEY</strong>: <code>eyJhbGciOi...</code></div>
-                    </div>
-                    <span className="text-[10px] text-zinc-500 mt-2 block leading-snug">
-                      * Nota: Variáveis com o prefixo <code>VITE_</code> são carregadas de forma segura no lado do cliente (Vite HMR). Nenhuma chave sensível fica exposta publicamente sem autorização.
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {checkingDb ? (
-              <div className="py-6 text-center text-xs animate-pulse text-orange-500 flex items-center justify-center gap-2 font-mono">
-                <Clock className="w-4 h-4 animate-spin" /> Escaneando tabelas remotas...
-              </div>
-            ) : dbStatusResult ? (
-              <div className="space-y-4 mb-4">
-                <div className="p-3 bg-emerald-600/5 border border-emerald-500/20 rounded-xl text-xs flex items-start gap-2.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold text-zinc-200 dark:text-zinc-100 block">Conexão Saudável</span>
-                    <span className="text-zinc-500 text-[11px] block mt-0.5">Adaptador modular local sincronizado com a latência de {dbStatusResult.latencyMs}ms.</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-[11px] font-mono p-3 bg-zinc-950/30 rounded-xl border border-zinc-850">
-                  <div>
-                    <span className="text-zinc-500">Status Gateway:</span>
-                    <span className="text-emerald-400 font-bold block">{dbStatusResult.status}</span>
-                  </div>
-                  <div>
-                    <span className="text-zinc-500">Canal Ativo:</span>
-                    <span className="text-orange-500 font-bold block">{dbStatusResult.provider}</span>
-                  </div>
-                  <div className="col-span-2 pt-2 mt-2 border-t border-zinc-850/60">
-                    <span className="text-zinc-500 block mb-1">Tabelas Locais Monitoradas:</span>
-                    <div className="flex flex-wrap gap-1">
-                      {dbStatusResult.tables.map((tbl: string) => (
-                        <span key={tbl} className="px-1.5 py-0.5 bg-zinc-800 text-[9px] font-bold text-zinc-300 rounded border border-zinc-700">{tbl}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="flex flex-col sm:grid sm:grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={handleTestDatabase}
-                id="test-database-btn"
-                className="py-2.5 bg-[#D35400] hover:bg-[#FC6B0A] text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
-              >
-                <Database className="w-3.5 h-3.5" /> Testar Banco Supabase
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => {
-                  showToast('Estrutura de tabelas (SQL) copiada para o console de desenvolvimento. Abra-o com F12.', 'info');
-                  console.log(`
--- =========================================================
--- SCHEMA DE PORTABILIDADE E CONEXÃO EM TEMPO REAL - AGRESTE
--- Execute este comando no console SQL (SQL Editor) do seu Supabase:
--- =========================================================
-
-CREATE TABLE IF NOT EXISTS public.agreste_sync (
-    key text PRIMARY KEY,
-    data jsonb NOT NULL,
-    updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Habilitar replicação em tempo real para sincronia instantânea
-ALTER PUBLICATION supabase_realtime ADD TABLE public.agreste_sync;
-
--- Habilitar permissões públicas se autenticação de anon for habilitada
-ALTER TABLE public.agreste_sync ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public read and write access" ON public.agreste_sync
-    FOR ALL USING (true) WITH CHECK (true);
-
-console.log('SQL IMPRESSO COM SUCESSO - PRONTO PARA COPIAR');
-                  `);
-                }}
-                id="export-schema-btn"
-                className={`py-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${
-                  theme === 'dark' ? 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-600'
-                }`}
-              >
-                <FileCode className="w-3.5 h-3.5" /> Ver SQL Schema
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowResetConfirm(true)}
-                id="reset-database-btn"
-                className="col-span-2 py-2.5 bg-red-600/10 hover:bg-red-600 border border-red-500/25 hover:border-red-650 text-red-500 hover:text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-all"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Zerar Banco de Dados
               </button>
             </div>
           </div>

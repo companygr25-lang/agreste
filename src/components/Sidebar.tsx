@@ -66,18 +66,6 @@ export default function Sidebar({
   if (!allowedTabs.includes('controles')) {
     allowedTabs.push('controles');
   }
-  
-  if (normalizedUser !== 'gil silva') {
-    if (!allowedTabs.includes('agreste-chat')) {
-      allowedTabs.push('agreste-chat');
-    }
-  } else {
-    // Developers / Admins should keep layout completely clean from chats
-    const chatIndex = allowedTabs.indexOf('agreste-chat');
-    if (chatIndex !== -1) {
-      allowedTabs.splice(chatIndex, 1);
-    }
-  }
 
   const allMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <Building2 className="w-4.5 h-4.5" /> },
@@ -106,7 +94,6 @@ export default function Sidebar({
     },
     { id: 'controles', label: 'Tipos de Controles', icon: <BookOpen className="w-4.5 h-4.5" /> },
     { id: 'gerencia', label: 'Checklist', icon: <ClipboardList className="w-4.5 h-4.5" /> },
-    { id: 'agreste-chat', label: 'Agreste Chat', icon: <MessageSquare className="w-4.5 h-4.5" /> },
     { id: 'perfil', label: 'Meu Perfil', icon: <User className="w-4.5 h-4.5" /> },
     { id: 'configuracoes', label: isProvider ? 'Configuração' : 'Configurações', icon: <Settings className="w-4.5 h-4.5" /> },
   ];

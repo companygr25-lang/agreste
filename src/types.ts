@@ -153,5 +153,9 @@ export interface ManagerTask {
   completed: boolean;
   notes?: string;
   isCustom?: boolean;
+  plannedTime?: string;
+  startTime?: string;
+  endTime?: string;
+  details?: string;
 }
 

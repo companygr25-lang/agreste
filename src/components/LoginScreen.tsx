@@ -317,498 +317,137 @@ export default function LoginScreen({
           </p>
         </div>
 
-        {/* --- PORTAL NAVIGATION SEGMENTED TABS --- */}
-        {clientSubState !== 'completing_profile' && (
-          <div className="grid grid-cols-2 gap-1 p-1 bg-zinc-950/20 border border-zinc-800/20 rounded-xl mb-6">
-            <button
-              type="button"
-              onClick={() => setActiveSegment('tech')}
-              className={`py-2 text-[11px] font-bold uppercase rounded-lg transition-all cursor-pointer ${
-                activeSegment === 'tech'
-                  ? 'bg-[#D35400] text-white shadow-md'
-                  : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-            >
-              💼 Área Técnica
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveSegment('client')}
-              className={`py-2 text-[11px] font-bold uppercase rounded-lg transition-all cursor-pointer ${
-                activeSegment === 'client'
-                  ? 'bg-[#D35400] text-white shadow-md'
-                  : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-            >
-              💬 Área do Cliente
-            </button>
-          </div>
-        )}
-
         {/* ─── TECHNICAL / OPERATOR WORKSPACE LOGIN ─── */}
-        {activeSegment === 'tech' && (
-          <form onSubmit={handleTechSubmit} className="space-y-4" id="login-form">
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
-                Usuário / Operador
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                  <UserIcon className="w-4 h-4" />
-                </span>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Seu nome cadastrado"
-                  id="username-input"
-                  className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
-                    theme === 'dark'
-                      ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
-                      : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
-                  }`}
-                />
-              </div>
+        <form onSubmit={handleTechSubmit} className="space-y-4" id="login-form">
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
+              Usuário / Operador
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                <UserIcon className="w-4 h-4" />
+              </span>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Seu nome cadastrado"
+                id="username-input"
+                className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
+                  theme === 'dark'
+                    ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                    : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                }`}
+              />
             </div>
-
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
-                Senha de Acesso
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                  <Lock className="w-4 h-4" />
-                </span>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  id="password-input"
-                  className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
-                    theme === 'dark'
-                      ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
-                      : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
-                  }`}
-                />
-              </div>
-            </div>
-
-            {isRegister && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="space-y-3"
-              >
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
-                    Confirmar Senha
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                      <ShieldCheck className="w-4 h-4" />
-                    </span>
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      id="confirm-password-input"
-                      className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
-                        theme === 'dark'
-                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
-                          : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
-                    Função / Cargo Operacional
-                  </label>
-                  <select
-                    value={cargo}
-                    onChange={(e) => setCargo(e.target.value as any)}
-                    id="cargo-select"
-                    className={`w-full py-2.5 px-3 rounded-xl border text-xs outline-none transition-all ${
-                      theme === 'dark'
-                        ? 'bg-zinc-950 border-zinc-200 text-white focus:border-[#D35400]'
-                        : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
-                    }`}
-                  >
-                    <option value="técnico" className={theme === 'dark' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}>Técnico</option>
-                    <option value="gerente" className={theme === 'dark' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}>Gerente</option>
-                    <option value="supervisor de operações" className={theme === 'dark' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}>Supervisor de Operações</option>
-                  </select>
-                </div>
-              </motion.div>
-            )}
-
-            <button
-              type="submit"
-              id="login-submit-btn"
-              className="w-full py-2.5 bg-[#D35400] hover:bg-[#FC6B0A] text-white text-xs font-bold uppercase rounded-xl shadow-lg shadow-[#D35400]/10 flex items-center justify-center gap-2 cursor-pointer transition-colors"
-            >
-              {isRegister ? (
-                <>
-                  <UserPlus className="w-4 h-4" /> Registrar Acesso Técnico
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-4 h-4" /> Entrar no Painel Técnico
-                </>
-              )}
-            </button>
-
-            <div className="pt-4 border-t border-zinc-805/40 dark:border-zinc-900 text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsRegister(!isRegister);
-                  setPassword('');
-                  setConfirmPassword('');
-                }}
-                className="text-xs text-[#D35400] hover:text-[#FC6B0A] hover:underline cursor-pointer"
-              >
-                {isRegister
-                  ? 'Já é operador? Conectar ao Painel'
-                  : 'Trabalha conosco? Solicitar Acesso como Técnico'}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* ─── CLIENT CHAT / BOT PORTAL FLOWS ─── */}
-        {activeSegment === 'client' && (
-          <div className="space-y-4">
-
-            {/* A. CLIENT FAST LOGIN (ESTABLISHED) */}
-            {clientSubState === 'login' && (
-              <form onSubmit={handleClientLoginSubmit} className="space-y-4">
-                <div className="text-left bg-orange-500/5 p-3 rounded-xl border border-orange-500/10 mb-2">
-                  <h3 className="text-xs font-bold text-orange-400 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-orange-400 animate-pulse" />
-                    Acesso Rápido de Cliente
-                  </h3>
-                  <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
-                    Insira sua identificação (Nome, Empresa ou Usuário) e telefone de contato para abrir o chat. Nossa inteligência local localiza e recupera seu cadastro instantaneamente.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
-                    Seu Nome, Empresa ou Nome de Usuário *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                      <UserIcon className="w-4 h-4" />
-                    </span>
-                    <input
-                      type="text"
-                      required
-                      value={responsibleInput}
-                      onChange={(e) => setResponsibleInput(e.target.value)}
-                      placeholder="Ex: Roberto Alves"
-                      className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
-                        theme === 'dark'
-                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
-                          : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
-                    Número de Contato Cadastrado *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                      <Phone className="w-4 h-4" />
-                    </span>
-                    <input
-                      type="text"
-                      required
-                      value={phoneInput}
-                      onChange={(e) => setPhoneInput(e.target.value)}
-                      placeholder="Ex: (81) 98765-4321"
-                      className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
-                        theme === 'dark'
-                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
-                          : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 bg-[#D35400] hover:bg-[#FC6B0A] text-white text-xs font-bold uppercase rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-orange-500/10"
-                >
-                  <MessageSquare className="w-4 h-4" /> Iniciar Chat de Atendimento
-                </button>
-
-                <div className="pt-4 border-t border-zinc-900/10 dark:border-zinc-900 text-center space-y-3">
-                  <button
-                    type="button"
-                    onClick={() => setClientSubState('register')}
-                    className="text-xs text-[#D35400] hover:text-[#FC6B0A] hover:underline cursor-pointer font-bold block w-full"
-                  >
-                    Novo por aqui? Criar conta de cliente gratuitamente
-                  </button>
-                  <div className="text-zinc-650 text-[10px] font-bold uppercase tracking-wider py-1 flex items-center justify-center gap-2">
-                    <span className="w-8 h-px bg-zinc-800"></span> ou <span className="w-8 h-px bg-zinc-800"></span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const guestInfo = {
-                        id: `guest-${Date.now()}`,
-                        name: 'Visitante Temporário',
-                        responsible: 'Visitante',
-                        phone: '',
-                        city: '',
-                        isNew: true,
-                        isGuest: true
-                      };
-                      localStorage.setItem('agreste_logged_client', JSON.stringify(guestInfo));
-                      onClientLoginSuccess(guestInfo as any);
-                      showToast('Atendimento com o robô iniciado como Visitante!', 'success');
-                    }}
-                    className="w-full py-2 bg-transparent border border-orange-500/40 hover:border-orange-500 text-orange-400 hover:text-orange-300 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-colors"
-                  >
-                    <span>💬</span> Entrar como Visitante / Cadastro via Chatbot
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* B. CLIENT FREE SIGNUP STEP 1 */}
-            {clientSubState === 'register' && (
-              <form onSubmit={handleClientRegisterSubmit} className="space-y-4">
-                <div className="text-left bg-[#D35400]/5 p-3 rounded-xl border border-[#D35400]/10 mb-2">
-                  <h3 className="text-xs font-bold text-orange-400">Criar Novo Cadastro Gratuito</h3>
-                  <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
-                    Comece inserindo uma credencial simples e seu telefone. A seguir, você nos dirá detalhes sobre sua empresa.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
-                    Nome de Usuário de Chat *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                      <UserIcon className="w-4 h-4" />
-                    </span>
-                    <input
-                      type="text"
-                      required
-                      value={clientUsername}
-                      onChange={(e) => setClientUsername(e.target.value)}
-                      placeholder="Ex: jonasAtendimento"
-                      className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
-                        theme === 'dark'
-                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
-                          : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
-                    Selecione uma Senha *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-505">
-                      <Lock className="w-4 h-4" />
-                    </span>
-                    <input
-                      type="password"
-                      required
-                      value={clientPassword}
-                      onChange={(e) => setClientPassword(e.target.value)}
-                      placeholder="Ao menos 4 dígitos"
-                      className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
-                        theme === 'dark'
-                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
-                          : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
-                    Número de Contato / Celular *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                      <Phone className="w-4 h-4" />
-                    </span>
-                    <input
-                      type="text"
-                      required
-                      value={clientPhone}
-                      onChange={(e) => setClientPhone(e.target.value)}
-                      placeholder="Ex: (81) 99876-5432"
-                      className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
-                        theme === 'dark'
-                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
-                          : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 bg-[#D35400] hover:bg-[#FC6B0A] text-white text-xs font-bold uppercase rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow"
-                >
-                  Continuar Cadastro <ArrowRight className="w-4 h-4" />
-                </button>
-
-                <div className="pt-4 border-t border-zinc-900/10 dark:border-zinc-900 text-center">
-                  <button
-                    type="button"
-                    onClick={() => setClientSubState('login')}
-                    className="text-xs text-zinc-400 hover:text-white hover:underline cursor-pointer"
-                  >
-                    Voltar para Acesso Rápido (Já sou Cliente)
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* C. CLIENT FORM (TELA DE CADASTRO COMPLETO) */}
-            {clientSubState === 'completing_profile' && (
-              <form onSubmit={handleClientProfileCompleteSubmit} className="space-y-4">
-                <div className="text-left bg-[#D35400]/10 p-4 border border-[#D35400]/30 rounded-xl mb-1">
-                  <h3 className="text-sm font-bold text-orange-400 flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4" />
-                    Ficha de Cadastro de Novo Cliente
-                  </h3>
-                  <p className="text-[10px] text-zinc-400 mt-1">
-                    Preencha os dados abaixo sobre a sua empresa/residência. Ao concluir, nosso assistente virtual iniciará o chat.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1 text-zinc-400 text-left">
-                    Nome da Empresa / Localidade *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                      <Building className="w-4 h-4" />
-                    </span>
-                    <input
-                      type="text"
-                      required
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="Razão social, nome da empresa ou condomínio"
-                      className={`w-full py-2 px-3.5 pl-9 rounded-xl border text-xs outline-none transition-all ${
-                        theme === 'dark'
-                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
-                          : 'bg-white border-zinc-200 text-zinc-910 focus:border-[#D35400]'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1 text-zinc-400 text-left">
-                    Nome do Responsável *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                      <UserIcon className="w-4 h-4" />
-                    </span>
-                    <input
-                      type="text"
-                      required
-                      value={companyResponsible}
-                      onChange={(e) => setCompanyResponsible(e.target.value)}
-                      placeholder="Seu nome para contato"
-                      className={`w-full py-2 px-3.5 pl-9 rounded-xl border text-xs outline-none transition-all ${
-                        theme === 'dark'
-                          ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
-                          : 'bg-white border-zinc-200 text-zinc-910 focus:border-[#D35400]'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider mb-1 text-zinc-400 text-left">
-                      Cidade *
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                        <MapPin className="w-3.5 h-3.5" />
-                      </span>
-                      <input
-                        type="text"
-                        required
-                        value={companyCity}
-                        onChange={(e) => setCompanyCity(e.target.value)}
-                        placeholder="Ex: Caruaru"
-                        className={`w-full py-2 px-3 pl-8 rounded-xl border text-xs outline-none transition-all ${
-                          theme === 'dark'
-                            ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
-                            : 'bg-white border-zinc-200 text-zinc-910 focus:border-[#D35400]'
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider mb-1 text-zinc-400 text-left">
-                      Telefone *
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-505">
-                        <Phone className="w-3.5 h-3.5" />
-                      </span>
-                      <input
-                        type="text"
-                        required
-                        value={companyPhone}
-                        onChange={(e) => setCompanyPhone(e.target.value)}
-                        placeholder="Contato de faturamento"
-                        className={`w-full py-2 px-3 pl-8 rounded-xl border text-xs outline-none transition-all ${
-                          theme === 'dark'
-                            ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
-                            : 'bg-white border-zinc-200 text-zinc-910 focus:border-[#D35400]'
-                        }`}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setClientSubState('register')}
-                    className="flex-1 py-2 border border-zinc-800 text-zinc-400 text-xs font-bold uppercase rounded-xl hover:text-white transition-colors cursor-pointer"
-                  >
-                    Voltar
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-xl cursor-pointer shadow-md transition-shadow"
-                  >
-                    Abrir Chat Grátis
-                  </button>
-                </div>
-              </form>
-            )}
-
           </div>
-        )}
+
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
+              Senha de Acesso
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                <Lock className="w-4 h-4" />
+              </span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                id="password-input"
+                className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
+                  theme === 'dark'
+                    ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                    : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                }`}
+              />
+            </div>
+          </div>
+
+          {isRegister && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
+                  Confirmar Senha
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                    <ShieldCheck className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    id="confirm-password-input"
+                    className={`w-full py-2.5 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
+                      theme === 'dark'
+                        ? 'bg-zinc-950 border-zinc-800 text-white focus:border-[#D35400]'
+                        : 'bg-zinc-50 border-zinc-200 text-zinc-905 focus:bg-white focus:border-[#D35400]'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 text-left">
+                  Função / Cargo Operacional
+                </label>
+                <select
+                  value={cargo}
+                  onChange={(e) => setCargo(e.target.value as any)}
+                  id="cargo-select"
+                  className={`w-full py-2.5 px-3 rounded-xl border text-xs outline-none transition-all ${
+                    theme === 'dark'
+                      ? 'bg-zinc-950 border-zinc-200 text-white focus:border-[#D35400]'
+                      : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                  }`}
+                >
+                  <option value="técnico" className={theme === 'dark' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}>Técnico</option>
+                  <option value="gerente" className={theme === 'dark' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}>Gerente</option>
+                  <option value="supervisor de operações" className={theme === 'dark' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}>Supervisor de Operações</option>
+                </select>
+              </div>
+            </motion.div>
+          )}
+
+          <button
+            type="submit"
+            id="login-submit-btn"
+            className="w-full py-2.5 bg-[#D35400] hover:bg-[#FC6B0A] text-white text-xs font-bold uppercase rounded-xl shadow-lg shadow-[#D35400]/10 flex items-center justify-center gap-2 cursor-pointer transition-colors"
+          >
+            {isRegister ? (
+              <>
+                <UserPlus className="w-4 h-4" /> Registrar Acesso Técnico
+              </>
+            ) : (
+              <>
+                <LogIn className="w-4 h-4" /> Entrar no Painel Técnico
+              </>
+            )}
+          </button>
+
+          <div className="pt-4 border-t border-zinc-805/40 dark:border-zinc-900 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setIsRegister(!isRegister);
+                setPassword('');
+                setConfirmPassword('');
+              }}
+              className="text-xs text-[#D35400] hover:text-[#FC6B0A] hover:underline cursor-pointer"
+            >
+              {isRegister
+                ? 'Já é operador? Conectar ao Painel'
+                : 'Trabalha conosco? Solicitar Acesso como Técnico'}
+            </button>
+          </div>
+        </form>
       </motion.div>
     </div>
   );
