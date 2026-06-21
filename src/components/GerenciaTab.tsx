@@ -757,7 +757,7 @@ export default function GerenciaTab({ theme, showToast, canEdit = true }: Gerenc
       {/* CONFIRMATION DIALOG MODAL */}
       <AnimatePresence>
         {confirmModal && (
-          <div className="fixed inset-0 bg-black/75 z-55 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="fixed inset-0 bg-black/75 z-[100] flex items-center justify-center p-4 backdrop-blur-xs">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
