@@ -204,14 +204,7 @@ export class AGRESTE_DB {
       const allowedDevs = existing?.allowedDevices || [];
 
       if (deviceId && !allowedDevs.includes(deviceId)) {
-        if (allowedDevs.length < 2) {
-          allowedDevs.push(deviceId);
-        } else {
-          return {
-            valid: false,
-            message: 'Limite de aparelhos atingido para este usuário (máximo 2 aparelhos). Solicite a liberação de um aparelho anterior ao administrador.'
-          };
-        }
+        allowedDevs.push(deviceId);
       }
 
       details[normalized] = {
@@ -264,20 +257,12 @@ export class AGRESTE_DB {
       return { valid: false, status: 'blocked', message: 'Acesso bloqueado pelo provedor.' };
     }
 
-    // Check device limit
+    // Register this device if specified, without enforcing any device limits
     const allowedDevices = detail.allowedDevices || [];
     if (deviceId && !allowedDevices.includes(deviceId)) {
-      if (allowedDevices.length >= 2) {
-        return { 
-          valid: false, 
-          message: 'Limite de aparelhos atingido para este usuário (máximo 2 aparelhos). Entre em contato com o administrador para redefinir os aparelhos autorizados.' 
-        };
-      } else {
-        // Register this new device
-        detail.allowedDevices = [...allowedDevices, deviceId];
-        details[normalized] = detail;
-        this.saveUserDetails(details);
-      }
+      detail.allowedDevices = [...allowedDevices, deviceId];
+      details[normalized] = detail;
+      this.saveUserDetails(details);
     }
     
     return { valid: true };

@@ -468,7 +468,7 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
                       <div className="flex items-center gap-2.5 mt-0.5">
                         <div className="flex items-center gap-1 text-[10px] text-zinc-400 font-bold uppercase bg-zinc-950/20 px-2 py-0.5 rounded-md border border-zinc-900/10 dark:border-zinc-800/40">
                           <span>Aparelhos:</span>
-                          <span className="text-[#FC6B0A] font-mono">{(user.allowedDevices || []).length}/2</span>
+                          <span className="text-[#FC6B0A] font-mono">{(user.allowedDevices || []).length}</span>
                         </div>
                         {(user.allowedDevices || []).length > 0 && (
                           <button
