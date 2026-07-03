@@ -9,7 +9,7 @@ import { SystemUserDetail } from '../types';
 import { 
   Users, UserCheck, UserX, Clock, ShieldAlert, CheckCircle2, 
   Trash2, Search, Filter, ShieldCheck, UserMinus, KeyRound,
-  Edit, AlertCircle, X, Check
+  Edit, AlertCircle, X, Check, UserPlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -36,6 +36,90 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
   const [editCargo, setEditCargo] = useState<'técnico' | 'gerente' | 'supervisor de operações'>('técnico');
   const [editCanEditData, setEditCanEditData] = useState<boolean>(true);
   const [showEditConfirm, setShowEditConfirm] = useState<{ original: SystemUserDetail; updated: SystemUserDetail; newPassword?: string } | null>(null);
+
+  // Add Operator States
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newCargo, setNewCargo] = useState<'técnico' | 'gerente' | 'supervisor de operações'>('técnico');
+  const [newStatus, setNewStatus] = useState<'pending' | 'approved' | 'blocked'>('approved');
+  const [newPaymentStatus, setNewPaymentStatus] = useState<'pago' | 'pendente'>('pago');
+  const [newPaymentValue, setNewPaymentValue] = useState<number>(150);
+  const [newAllowedTabs, setNewAllowedTabs] = useState<string[]>([
+    'dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'perfil', 'configuracoes'
+  ]);
+  const [newCanEditData, setNewCanEditData] = useState<boolean>(true);
+
+  const handleToggleNewTabPermission = (tabId: string) => {
+    setNewAllowedTabs(prev => 
+      prev.includes(tabId) ? prev.filter(t => t !== tabId) : [...prev, tabId]
+    );
+  };
+
+  const handleAddSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim() || !newUsername.trim() || !newPassword.trim()) {
+      showToast('Por favor, preencha todos os campos obrigatórios.', 'error');
+      return;
+    }
+
+    const normalized = newUsername.toLowerCase().trim();
+
+    // Check if user already exists
+    const users = AGRESTE_DB.getUsers();
+    if (users[normalized] || normalized === 'gil silva') {
+      showToast('Este nome de usuário já está cadastrado no sistema.', 'error');
+      return;
+    }
+
+    // Check if adding this user would exceed the licenses limit (if approved)
+    if (newStatus === 'approved') {
+      const currentActive = (Object.values(usersDict) as SystemUserDetail[]).filter(u => u.status === 'approved' && u.username !== 'gil silva').length;
+      const limit = AGRESTE_DB.getLicensesLimit();
+      if (currentActive >= limit) {
+        showToast(`Limite de licenças atingido (${limit} acessos). Aumente o limite na aba Configurações ou salve este usuário como Pendente/Bloqueado.`, 'error');
+        return;
+      }
+    }
+
+    // Save user credentials password
+    users[normalized] = newPassword;
+    AGRESTE_DB.saveUsers(users);
+
+    // Save user details
+    const details = AGRESTE_DB.getUserDetails();
+    details[normalized] = {
+      username: normalized,
+      name: newName.trim(),
+      status: newStatus,
+      paymentStatus: newPaymentStatus,
+      paymentValue: newPaymentValue,
+      allowedTabs: newAllowedTabs,
+      cargo: newCargo,
+      canEditData: newCanEditData,
+      allowedDevices: []
+    };
+    AGRESTE_DB.saveUserDetails(details);
+
+    showToast(`Operador "${newName.trim()}" adicionado com sucesso!`, 'success');
+    
+    // Reset states
+    setShowAddModal(false);
+    setNewName('');
+    setNewUsername('');
+    setNewPassword('');
+    setNewCargo('técnico');
+    setNewStatus('approved');
+    setNewPaymentStatus('pago');
+    setNewPaymentValue(150);
+    setNewAllowedTabs([
+      'dashboard', 'clientes', 'calendario', 'relatorios', 'documentacao', 'perfil', 'configuracoes'
+    ]);
+    setNewCanEditData(true);
+
+    refreshUsers();
+  };
   
   const refreshUsers = () => {
     const updated = AGRESTE_DB.getUserDetails();
@@ -219,20 +303,30 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
           <p className="text-xs text-zinc-500 font-medium">Libere novos cadastros do sistema e consulte as licenças em andamento.</p>
         </div>
         
-        {/* Licensing Progress Overview */}
-        <div className={`p-4 rounded-2xl border ${
-          theme === 'dark' ? 'bg-[#18181A] border-zinc-850' : 'bg-white border-zinc-200'
-        } flex items-center gap-4 shadow-sm`}>
-          <div className="w-10 h-10 rounded-xl bg-orange-600/15 flex items-center justify-center text-orange-500 font-bold">
-            {activeCount}/{maxLicenses}
-          </div>
-          <div>
-            <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">Licenças Consumidas</div>
-            <div className="w-32 bg-zinc-800 h-1.5 rounded-full mt-1 overflow-hidden">
-              <div 
-                className="bg-orange-500 h-1.5 transition-all duration-300"
-                style={{ width: `${Math.min(100, (activeCount / maxLicenses) * 100)}%` }}
-              ></div>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <button
+            onClick={() => setShowAddModal(true)}
+            id="add-user-btn"
+            className="px-4 py-3 bg-[#D35400] hover:bg-[#FC6B0A] text-white text-xs font-bold uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md border border-[#FC6B0A]/10 hover:shadow-orange-500/10"
+          >
+            <UserPlus className="w-4 h-4" /> Adicionar Operador
+          </button>
+
+          {/* Licensing Progress Overview */}
+          <div className={`p-4 rounded-2xl border ${
+            theme === 'dark' ? 'bg-[#18181A] border-zinc-850' : 'bg-white border-zinc-200'
+          } flex items-center gap-4 shadow-sm`}>
+            <div className="w-10 h-10 rounded-xl bg-orange-600/15 flex items-center justify-center text-orange-500 font-bold">
+              {activeCount}/{maxLicenses}
+            </div>
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">Licenças Consumidas</div>
+              <div className="w-32 bg-zinc-800 h-1.5 rounded-full mt-1 overflow-hidden">
+                <div 
+                  className="bg-orange-500 h-1.5 transition-all duration-300"
+                  style={{ width: `${Math.min(100, (activeCount / maxLicenses) * 100)}%` }}
+                ></div>
+              </div>
             </div>
           </div>
         </div>
@@ -825,6 +919,281 @@ export default function UsersTab({ theme, showToast, onRefreshData }: UsersTabPr
                   Sim, Confirmar
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL 4: ADD OPERATOR MODAL */}
+      <AnimatePresence>
+        {showAddModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAddModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs"
+            />
+
+            {/* Modal Body */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className={`relative w-full max-w-md rounded-2xl border p-6 shadow-2xl z-10 max-h-[90vh] overflow-y-auto ${
+                theme === 'dark' ? 'bg-[#1A1A1A] border-[#242424] text-white' : 'bg-white border-zinc-200 text-zinc-900'
+              } scrollbar-thin`}
+            >
+              <div className="flex justify-between items-center mb-5">
+                <div className="text-left">
+                  <h3 className="text-lg font-bold font-display">Adicionar Novo Operador</h3>
+                  <p className="text-[10px] text-zinc-500">Cadastre credenciais, mensalidade e permissões de acesso do novo operador.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="text-zinc-500 hover:text-white p-1 hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAddSubmit} className="space-y-4 text-left">
+                {/* Nome Completo */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                    Nome Completo *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="Ex: Adriano Senna"
+                    className={`w-full py-2 px-3.5 rounded-xl border text-xs outline-none transition-all ${
+                      theme === 'dark'
+                        ? 'bg-zinc-950 border-[#242424] text-white focus:border-[#D35400]'
+                        : 'bg-zinc-100 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                    }`}
+                  />
+                </div>
+
+                {/* Nome de Usuário (login) */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                    Nome de Usuário (Login) *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-mono">
+                      @
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      placeholder="adriano.senna"
+                      className={`w-full py-2 pl-7 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-[#242424] text-white focus:border-[#D35400]'
+                          : 'bg-zinc-100 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Senha de Acesso */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                    Senha de Acesso *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                      <KeyRound className="w-3.5 h-3.5" />
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Senha provisória do usuário..."
+                      className={`w-full py-2 pl-9 pr-3.5 rounded-xl border text-xs outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-[#242424] text-white focus:border-[#D35400]'
+                          : 'bg-zinc-100 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Numeric Licença Value and Status Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                      Licença Cadastrada (R$) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={newPaymentValue}
+                      onChange={(e) => setNewPaymentValue(Number(e.target.value))}
+                      className={`w-full py-2 px-3.5 rounded-xl border text-xs outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-[#242424] text-white focus:border-[#D35400]'
+                          : 'bg-zinc-100 border-zinc-200 text-zinc-900 focus:bg-white focus:border-[#D35400]'
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                      Situação de Acesso *
+                    </label>
+                    <select
+                      value={newStatus}
+                      onChange={(e) => setNewStatus(e.target.value as any)}
+                      className={`w-full py-2 px-3 rounded-xl border text-xs outline-none transition-all ${
+                        theme === 'dark'
+                          ? 'bg-zinc-950 border-[#242424] text-zinc-300 focus:border-[#D35400]'
+                          : 'bg-white border-zinc-200 text-zinc-700 focus:border-[#D35400]'
+                      }`}
+                    >
+                      <option value="approved">Aprovado / Ativo</option>
+                      <option value="pending">Pendente Liberação</option>
+                      <option value="blocked">Bloqueado</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Faturamento Financeiro */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                    Status Faturamento Financeiro *
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNewPaymentStatus('pago')}
+                      className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold uppercase border cursor-pointer ${
+                        newPaymentStatus === 'pago'
+                          ? 'bg-emerald-600/10 border-emerald-600 text-emerald-400'
+                          : theme === 'dark' ? 'bg-zinc-950/20 border-[#242424] text-zinc-500' : 'bg-zinc-100 border-zinc-200 text-zinc-500'
+                      }`}
+                    >
+                      Pago
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewPaymentStatus('pendente')}
+                      className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold uppercase border cursor-pointer ${
+                        newPaymentStatus === 'pendente'
+                          ? 'bg-red-600/10 border-red-600 text-red-500'
+                          : theme === 'dark' ? 'bg-zinc-950/20 border-[#242424] text-zinc-500' : 'bg-zinc-100 border-zinc-200 text-zinc-500'
+                      }`}
+                    >
+                      Pendente
+                    </button>
+                  </div>
+                </div>
+
+                {/* Função / Cargo Dropdown */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                    Função / Cargo Operacional *
+                  </label>
+                  <select
+                    value={newCargo}
+                    onChange={(e) => setNewCargo(e.target.value as any)}
+                    className={`w-full py-2 px-3 rounded-xl border text-xs outline-none transition-all ${
+                      theme === 'dark'
+                        ? 'bg-zinc-950 border-[#242424] text-zinc-300 focus:border-[#D35400]'
+                        : 'bg-white border-zinc-200 text-zinc-700 focus:border-[#D35400]'
+                    }`}
+                  >
+                    <option value="técnico">Técnico</option>
+                    <option value="gerente">Gerente</option>
+                    <option value="supervisor de operações">Supervisor de Operações</option>
+                  </select>
+                </div>
+
+                {/* Permissão de Edição */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                    Nível de Permissão / Edição *
+                  </label>
+                  <select
+                    value={newCanEditData ? 'completo' : 'visualizacao'}
+                    onChange={(e) => setNewCanEditData(e.target.value === 'completo')}
+                    className={`w-full py-2 px-3 rounded-xl border text-xs outline-none transition-all ${
+                      theme === 'dark'
+                        ? 'bg-zinc-950 border-[#242424] text-zinc-300 focus:border-[#D35400]'
+                        : 'bg-white border-zinc-200 text-zinc-700 focus:border-[#D35400]'
+                    }`}
+                  >
+                    <option value="completo">Acesso Completo (Pode criar, editar e excluir)</option>
+                    <option value="visualizacao">Visualização Apenas (Não pode alterar nada)</option>
+                  </select>
+                </div>
+
+                {/* Permissions checkboxes (Allowed tabs) */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400">
+                    Telas e Permissões do Sistema
+                  </label>
+                  <div className={`p-3 rounded-xl border text-left max-h-[140px] overflow-y-auto ${
+                    theme === 'dark' ? 'bg-zinc-950 border-[#242424]' : 'bg-zinc-50 border-zinc-200'
+                  } space-y-1.5 scrollbar-thin`}>
+                    {[
+                      { id: 'dashboard', label: 'Painel Geral (Dashboard)' },
+                      { id: 'clientes', label: 'Gestão de Clientes' },
+                      { id: 'calendario', label: 'Calendário de Cronogramas' },
+                      { id: 'relatorios', label: 'Laudos e Visitas' },
+                      { id: 'usuarios', label: 'Gestão de Usuários (Admin)' },
+                      { id: 'documentacao', label: 'Documentação Técnica' },
+                      { id: 'perfil', label: 'Perfil do Operador' },
+                      { id: 'configuracoes', label: 'Configurações Globais' }
+                    ].map(tab => {
+                      const isChecked = newAllowedTabs.includes(tab.id);
+                      return (
+                        <div 
+                          key={tab.id}
+                          onClick={() => handleToggleNewTabPermission(tab.id)}
+                          className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[#D35400]/5 cursor-pointer text-[11px] transition-colors"
+                        >
+                          <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-all ${
+                            isChecked 
+                              ? 'bg-[#D35400] border-[#D35400]' 
+                              : theme === 'dark' ? 'border-zinc-800 bg-zinc-900/40' : 'border-zinc-300 bg-white'
+                          }`}>
+                            {isChecked && <Check className="w-2.5 h-2.5 text-white stroke-[3.5px]" />}
+                          </div>
+                          <span className={isChecked ? 'text-white' : 'text-zinc-350 dark:text-zinc-400'}>{tab.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Save Options */}
+                <div className="pt-3 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="flex-1 py-2 border border-zinc-805/40 dark:border-zinc-800 text-zinc-550 hover:text-white rounded-xl transition-all cursor-pointer text-xs font-bold uppercase"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 bg-[#D35400] hover:bg-[#FC6B0A] text-white font-bold text-xs uppercase rounded-xl cursor-pointer"
+                  >
+                    Cadastrar Operador
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}
