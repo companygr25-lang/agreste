@@ -8,7 +8,8 @@ import { VisitReport, PestStatus } from '../types';
 import { AGRESTE_DB } from '../services/db';
 import { 
   FileText, Search, Filter, Download, Trash2, Calendar, 
-  MapPin, User, ChevronDown, Check, Star, RefreshCw, AlertTriangle, Eye
+  MapPin, User, ChevronDown, Check, Star, RefreshCw, AlertTriangle, Eye,
+  CheckCircle2, Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -382,6 +383,39 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
     return true;
   });
 
+  // Fetch additional data to compute accurate completed/pending visit counters
+  const clients = AGRESTE_DB.getClients();
+  const calendarEvents = AGRESTE_DB.getCalendar();
+
+  // Filter clients dynamically based on current client/city search filters
+  const filteredClients = clients.filter(c => {
+    if (filterClient && !c.name.toLowerCase().includes(filterClient.toLowerCase())) return false;
+    if (filterCity && !c.city.toLowerCase().includes(filterCity.toLowerCase())) return false;
+    return true;
+  });
+
+  // Quantidade já feita (Visitas com relatórios emitidos)
+  const totalJaFeitas = reports.length;
+  const filtradasJaFeitas = filteredReports.length;
+
+  // Quantidade que falta (Clientes cadastrados que ainda não possuem relatório)
+  const totalClientesFaltam = clients.filter(c => !reports.some(r => r.clientId === c.id)).length;
+  const filtradasClientesFaltam = filteredClients.filter(c => !reports.some(r => r.clientId === c.id)).length;
+
+  // Visitas do cronograma pendentes (no calendário)
+  const totalCronogramasPendentes = calendarEvents.filter(e => e.situation === 'pendente').length;
+  const filtradasCronogramasPendentes = calendarEvents.filter(e => {
+    if (e.situation !== 'pendente') return false;
+    if (filterClient && !e.clientName.toLowerCase().includes(filterClient.toLowerCase())) return false;
+    if (filterCity) {
+      const c = clients.find(cl => cl.id === e.clientId);
+      if (c && !c.city.toLowerCase().includes(filterCity.toLowerCase())) return false;
+    }
+    return true;
+  }).length;
+
+  const isAnyFilterActive = !!(filterClient || filterCity || filterPest !== 'todos' || filterDate);
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
@@ -407,6 +441,96 @@ export default function ReportsTab({ theme, reports, showToast, onRefreshData, c
           >
             <Download className="w-4 h-4" /> Exportar Planilha Excel
           </button>
+        </div>
+      </div>
+
+      {/* Contadores de Visitas (Já Feito vs Faltam) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Card 1: Já Feito */}
+        <div className={`p-4 rounded-2xl border ${
+          theme === 'dark' 
+            ? 'bg-zinc-900 border-zinc-800 text-white' 
+            : 'bg-white border-zinc-200 text-zinc-900 shadow-sm'
+        }`}>
+          <div className="flex justify-between items-start">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold font-mono tracking-wider text-zinc-400 uppercase">
+                Já Feito (Laudos Emitidos)
+              </span>
+              <h3 className="text-3xl font-black font-display text-emerald-500 tracking-tight">
+                {String(isAnyFilterActive ? filtradasJaFeitas : totalJaFeitas).padStart(2, '0')}
+              </h3>
+            </div>
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+          </div>
+          <p className="text-[11px] text-zinc-500 mt-3 leading-relaxed">
+            Visitas realizadas com relatório final assinado.
+            {isAnyFilterActive && (
+              <span className="block mt-1 text-[10px] text-zinc-400">
+                Total histórico: {totalJaFeitas} relatórios.
+              </span>
+            )}
+          </p>
+        </div>
+
+        {/* Card 2: Clientes sem Relatório */}
+        <div className={`p-4 rounded-2xl border ${
+          theme === 'dark' 
+            ? 'bg-zinc-900 border-zinc-800 text-white' 
+            : 'bg-white border-zinc-200 text-zinc-900 shadow-sm'
+        }`}>
+          <div className="flex justify-between items-start">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold font-mono tracking-wider text-zinc-400 uppercase">
+                Faltam (Clientes sem Laudo)
+              </span>
+              <h3 className="text-3xl font-black font-display text-orange-500 tracking-tight">
+                {String(isAnyFilterActive ? filtradasClientesFaltam : totalClientesFaltam).padStart(2, '0')}
+              </h3>
+            </div>
+            <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-500">
+              <Clock className="w-5 h-5" />
+            </div>
+          </div>
+          <p className="text-[11px] text-zinc-500 mt-3 leading-relaxed">
+            Clientes cadastrados que ainda não possuem visitas registradas.
+            {isAnyFilterActive && (
+              <span className="block mt-1 text-[10px] text-zinc-400">
+                Total histórico: {totalClientesFaltam} clientes sem laudo.
+              </span>
+            )}
+          </p>
+        </div>
+
+        {/* Card 3: Cronogramas Pendentes */}
+        <div className={`p-4 rounded-2xl border ${
+          theme === 'dark' 
+            ? 'bg-zinc-900 border-zinc-800 text-white' 
+            : 'bg-white border-zinc-200 text-zinc-900 shadow-sm'
+        }`}>
+          <div className="flex justify-between items-start">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold font-mono tracking-wider text-zinc-400 uppercase">
+                Faltam (Cronogramas Pendentes)
+              </span>
+              <h3 className="text-3xl font-black font-display text-amber-500 tracking-tight">
+                {String(isAnyFilterActive ? filtradasCronogramasPendentes : totalCronogramasPendentes).padStart(2, '0')}
+              </h3>
+            </div>
+            <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+          </div>
+          <p className="text-[11px] text-zinc-500 mt-3 leading-relaxed">
+            Vistorias programadas no cronograma aguardando execução física.
+            {isAnyFilterActive && (
+              <span className="block mt-1 text-[10px] text-zinc-400">
+                Total histórico: {totalCronogramasPendentes} cronogramas pendentes.
+              </span>
+            )}
+          </p>
         </div>
       </div>
 
